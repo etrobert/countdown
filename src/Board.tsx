@@ -15,7 +15,9 @@ export default function Board({
     minions.find((m) => m.lane === lane && m.cell === cell);
 
   return (
-    <div className="flex gap-3 self-center">
+    // Lanes run horizontally and stack vertically: yours advance left to right,
+    // theirs right to left.
+    <div className="flex flex-col gap-3 self-center">
       {Array.from({ length: LANES }, (_, lane) => {
         // A card arrives at cell 0, so a full entry cell blocks the whole lane.
         const playable = selecting && !at(lane, 0);
@@ -26,9 +28,9 @@ export default function Board({
             disabled={!playable}
             onClick={() => onPlayLane(lane)}
             aria-label={`Play into lane ${lane + 1}`}
-            // Reversed so cell 0 sits nearest you — a minion you summon enters
-            // there and walks upward toward the far end.
-            className={`flex flex-col-reverse gap-2 rounded-lg p-1 transition-colors ${
+            // Cell 0 is leftmost — a minion you summon enters there and walks
+            // rightward toward the far end.
+            className={`flex gap-2 rounded-lg p-1 transition-colors ${
               playable ? "cursor-pointer bg-ink/8" : "cursor-default"
             }`}
           >
