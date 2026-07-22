@@ -1,9 +1,13 @@
+import rhinoArt from "./assets/rhino.jpg";
+
 /** The printed card: what every copy of it shares. */
 export type Card = {
   name: string;
   cost: number;
   atk: number;
   hp: number;
+  /** Optional until every card has a sketch. */
+  art?: string;
 };
 
 export const HAND_SIZE = 5;
@@ -21,6 +25,7 @@ export const CARDS = {
   lash: { name: "Lash", cost: 3, atk: 3, hp: 2 },
   zealot: { name: "Zealot", cost: 3, atk: 5, hp: 3 },
   colossus: { name: "Colossus", cost: 5, atk: 4, hp: 6 },
+  rhino: { name: "Rhino", cost: 3, atk: 4, hp: 4, art: rhinoArt },
 } satisfies Record<string, Card>;
 
 /** Identifies a kind of card, not a copy of one — see `CardInstance`. */
