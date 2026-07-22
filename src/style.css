@@ -1,132 +1,22 @@
-:root {
+@import "tailwindcss";
+
+@theme {
+  --font-sans: system-ui, sans-serif;
+  --color-ink: #1a1720;
+  --color-parchment: #f4f1ea;
+  --color-face: #fffdf8;
+  --color-edge: #8b8397;
   --card-w: 9rem;
   --card-h: 12.5rem;
-  --ink: #1a1720;
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  font-family: system-ui, sans-serif;
-  background: #f4f1ea;
-  color: var(--ink);
-}
-
-.board {
-  position: relative;
-  min-height: 100vh;
-  display: grid;
-  grid-template-rows: 1fr auto;
-  justify-items: center;
-}
-
-.board > h1 {
-  align-self: center;
-}
-
-/* Hand */
-
-/* Rotation, translate and the hover scale do not grow the layout box, so the
-   hand needs padding to overhang into or it clips the viewport. */
-.hand {
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  padding: 4rem 2rem 3rem;
-}
-
-.hand-slot {
-  position: relative;
-  z-index: var(--z);
-  rotate: var(--rot);
-  translate: 0 var(--dy);
-  transition:
-    rotate 150ms ease,
-    translate 150ms ease,
-    scale 150ms ease;
-}
-
-.hand-slot:not(:first-child) {
-  margin-left: -4rem;
-}
-
-/* Straighten and lift the hovered card clear of its neighbours. */
-.hand-slot:hover {
-  rotate: 0deg;
-  translate: 0 -2.5rem;
-  scale: 1.15;
-  z-index: 10;
-}
-
-/* Card */
-
-.card {
-  width: var(--card-w);
-  height: var(--card-h);
-  padding: 0.6rem;
-  box-sizing: border-box;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  background: #fffdf8;
-  border: 1px solid var(--ink);
-  border-radius: 0.4rem;
-  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
-}
-
-.card-cost {
-  justify-self: start;
-  font-weight: 700;
-}
-
-.card-name {
-  margin: 0;
-  align-self: center;
-  font-size: 1.1rem;
-  text-align: center;
-}
-
-.card-stats {
-  display: flex;
-  justify-content: space-between;
-  font-weight: 700;
-}
-
-/* Deck — a physical stack whose height reads as remaining life. */
-
-.deck {
-  position: absolute;
-  right: 2.5rem;
-  bottom: 3rem;
-  display: grid;
-  justify-items: center;
-  gap: 0.75rem;
-}
-
-.deck-stack {
-  position: relative;
-  width: var(--card-w);
-  height: var(--card-h);
-}
-
-/* Each back sits slightly above and right of the one below, and carries a pale
-   edge so the seams read against the dark face — otherwise the stack looks
-   like a single flat card. */
-.deck-back {
-  position: absolute;
-  inset: 0;
-  translate: calc(var(--depth) * 0.5px) calc(var(--depth) * -3px);
+/* Hatched paper texture for the back of a deck card. */
+@utility card-back {
   background: repeating-linear-gradient(
     45deg,
-    var(--ink),
-    var(--ink) 3px,
+    var(--color-ink),
+    var(--color-ink) 3px,
     #2f2938 3px,
     #2f2938 6px
   );
-  border: 1px solid #8b8397;
-  border-radius: 0.4rem;
-}
-
-.deck-count {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
