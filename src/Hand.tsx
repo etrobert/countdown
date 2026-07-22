@@ -26,19 +26,40 @@ function fan(index: number, count: number): CSSProperties {
   };
 }
 
-export default function Hand({ cards }: { cards: CardInstance[] }) {
+const LIFTED = "z-10 -translate-y-10 rotate-0 scale-115";
+const FANNED = "z-[var(--z)] translate-y-[var(--dy)] rotate-[var(--rot)]";
+
+export default function Hand({
+  cards,
+  selected,
+  onSelect,
+}: {
+  cards: CardInstance[];
+  selected: number | null;
+  onSelect: (uid: number | null) => void;
+}) {
   return (
     // Rotation, translate and the hover scale do not grow the layout box, so
     // the hand needs padding to overhang into or it clips the viewport.
     <div className="flex items-end justify-center px-8 pt-16 pb-12">
       {cards.map((instance, i) => (
-        <div
+        <button
           key={instance.uid}
-          className="relative z-[var(--z)] translate-y-[var(--dy)] rotate-[var(--rot)] transition-[rotate,translate,scale] duration-150 ease-in-out not-first:-ml-16 hover:z-10 hover:-translate-y-10 hover:rotate-0 hover:scale-115"
+          type="button"
+          aria-pressed={selected === instance.uid}
+          onClick={() =>
+            onSelect(selected === instance.uid ? null : instance.uid)
+          }
+          // Selected and fanned set the same properties, so they are swapped
+          // rather than combined — appending would leave the winner up to
+          // Tailwind's own rule order rather than this list.
+          className={`relative cursor-pointer transition-[rotate,translate,scale] duration-150 ease-in-out not-first:-ml-16 hover:z-10 hover:-translate-y-10 hover:rotate-0 hover:scale-115 ${
+            selected === instance.uid ? LIFTED : FANNED
+          }`}
           style={fan(i, cards.length)}
         >
           <Card card={CARDS[instance.card]} />
-        </div>
+        </button>
       ))}
     </div>
   );
