@@ -17,3 +17,12 @@ export function initialState(): GameState {
     deck: cards.slice(HAND_SIZE),
   };
 }
+
+/** Moves the top card into hand. Drawing is the countdown — the deck is the
+ *  life total, so every draw spends one. A no-op on an empty deck; running out
+ *  is a loss, which is not modelled yet. */
+export function draw(state: GameState): GameState {
+  const [top, ...rest] = state.deck;
+  if (!top) return state;
+  return { deck: rest, hand: [...state.hand, top] };
+}

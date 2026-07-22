@@ -5,12 +5,21 @@ declare module "react" {
   }
 }
 
-export default function Deck({ count }: { count: number }) {
+export default function Deck({
+  count,
+  onDraw,
+}: {
+  count: number;
+  onDraw: () => void;
+}) {
   return (
     <div className="absolute right-10 bottom-12 grid justify-items-center gap-3">
-      <div
-        className="relative h-[var(--card-h)] w-[var(--card-w)]"
-        aria-label={`${count} cards left`}
+      <button
+        type="button"
+        onClick={onDraw}
+        disabled={count === 0}
+        aria-label={`Draw a card — ${count} left`}
+        className="relative h-[var(--card-h)] w-[var(--card-w)] cursor-pointer transition-transform duration-150 hover:-translate-y-1 disabled:cursor-default disabled:hover:translate-y-0"
       >
         {/* Each back sits slightly above and right of the one below, and
             carries a pale edge so the seams read against the dark face —
@@ -22,7 +31,7 @@ export default function Deck({ count }: { count: number }) {
             style={{ "--depth": i }}
           />
         ))}
-      </div>
+      </button>
       <span className="font-bold tabular-nums">{count}</span>
     </div>
   );
