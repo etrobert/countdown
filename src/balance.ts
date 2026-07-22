@@ -8,6 +8,8 @@ export type Card = {
 
 export const HAND_SIZE = 5;
 
+export const DECK_SIZE = 15;
+
 export const CARDS: Card[] = [
   { id: "runner", name: "Runner", cost: 1, atk: 1, hp: 1 },
   { id: "sentry", name: "Sentry", cost: 2, atk: 1, hp: 4 },
