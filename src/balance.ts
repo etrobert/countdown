@@ -10,6 +10,11 @@ export const HAND_SIZE = 5;
 
 export const DECK_SIZE = 15;
 
+export const LANES = 3;
+
+/** Cells per lane. Cell 0 is your end; a minion walks toward the far end. */
+export const LANE_CELLS = 4;
+
 export const CARDS = {
   runner: { name: "Runner", cost: 1, atk: 1, hp: 1 },
   sentry: { name: "Sentry", cost: 2, atk: 1, hp: 4 },
