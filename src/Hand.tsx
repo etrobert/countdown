@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import Card from "./Card.tsx";
-import type { Card as CardData } from "./balance.ts";
+import { CARDS } from "./balance.ts";
+import type { CardInstance } from "./state.ts";
 
 declare module "react" {
   interface CSSProperties {
@@ -25,18 +26,18 @@ function fan(index: number, count: number): CSSProperties {
   };
 }
 
-export default function Hand({ cards }: { cards: CardData[] }) {
+export default function Hand({ cards }: { cards: CardInstance[] }) {
   return (
     // Rotation, translate and the hover scale do not grow the layout box, so
     // the hand needs padding to overhang into or it clips the viewport.
     <div className="flex items-end justify-center px-8 pt-16 pb-12">
-      {cards.map((card, i) => (
+      {cards.map((instance, i) => (
         <div
-          key={card.id}
+          key={instance.uid}
           className="relative z-[var(--z)] translate-y-[var(--dy)] rotate-[var(--rot)] transition-[rotate,translate,scale] duration-150 ease-in-out not-first:-ml-16 hover:z-10 hover:-translate-y-10 hover:rotate-0 hover:scale-115"
           style={fan(i, cards.length)}
         >
-          <Card card={card} />
+          <Card card={CARDS[instance.card]} />
         </div>
       ))}
     </div>

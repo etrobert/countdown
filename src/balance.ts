@@ -1,5 +1,5 @@
+/** The printed card: what every copy of it shares. */
 export type Card = {
-  id: string;
   name: string;
   cost: number;
   atk: number;
@@ -10,10 +10,21 @@ export const HAND_SIZE = 5;
 
 export const DECK_SIZE = 15;
 
-export const CARDS: Card[] = [
-  { id: "runner", name: "Runner", cost: 1, atk: 1, hp: 1 },
-  { id: "sentry", name: "Sentry", cost: 2, atk: 1, hp: 4 },
-  { id: "lash", name: "Lash", cost: 3, atk: 3, hp: 2 },
-  { id: "zealot", name: "Zealot", cost: 3, atk: 5, hp: 3 },
-  { id: "colossus", name: "Colossus", cost: 5, atk: 4, hp: 6 },
-];
+export const CARDS = {
+  runner: { name: "Runner", cost: 1, atk: 1, hp: 1 },
+  sentry: { name: "Sentry", cost: 2, atk: 1, hp: 4 },
+  lash: { name: "Lash", cost: 3, atk: 3, hp: 2 },
+  zealot: { name: "Zealot", cost: 3, atk: 5, hp: 3 },
+  colossus: { name: "Colossus", cost: 5, atk: 4, hp: 6 },
+} satisfies Record<string, Card>;
+
+/** Identifies a kind of card, not a copy of one — see `CardInstance`. */
+export type CardId = keyof typeof CARDS;
+
+const CARD_IDS = Object.keys(CARDS) as CardId[];
+
+/** Placeholder: cycles the pool to fill the deck. Real decklists are still open. */
+export const STARTING_DECK: CardId[] = Array.from(
+  { length: DECK_SIZE },
+  (_, i) => CARD_IDS[i % CARD_IDS.length],
+);
