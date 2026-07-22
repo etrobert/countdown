@@ -73,6 +73,8 @@ hit-testing for free.
 in one pass. Rendered with `mix-blend-mode: multiply` so the paper drops out. No
 animation.
 
+See [ART.md](ART.md) for the full drawing-format spec (frame, scale, capture).
+
 ## Process
 
 Budget is ~20h each, two people.
