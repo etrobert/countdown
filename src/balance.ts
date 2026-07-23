@@ -1,5 +1,6 @@
-import rhinoArt from "./assets/rhino.jpg";
-import steedArt from "./assets/horse.jpg";
+import goblinArt from "./assets/goblin.png";
+import swordmanArt from "./assets/swordman.png";
+import hydraArt from "./assets/hydra.png";
 
 /** The printed card: what every copy of it shares. */
 export type Card = {
@@ -26,8 +27,9 @@ export const CARDS = {
   lash: { name: "Lash", cost: 3, atk: 3, hp: 2 },
   zealot: { name: "Zealot", cost: 3, atk: 5, hp: 3 },
   colossus: { name: "Colossus", cost: 5, atk: 4, hp: 6 },
-  rhino: { name: "Rhino", cost: 3, atk: 4, hp: 4, art: rhinoArt },
-  steed: { name: "Steed", cost: 2, atk: 3, hp: 2, art: steedArt },
+  goblin: { name: "Goblin", cost: 1, atk: 2, hp: 1, art: goblinArt },
+  swordman: { name: "Swordman", cost: 3, atk: 3, hp: 3, art: swordmanArt },
+  hydra: { name: "Hydra", cost: 5, atk: 5, hp: 6, art: hydraArt },
 } satisfies Record<string, Card>;
 
 /** Identifies a kind of card, not a copy of one — see `CardInstance`. */
