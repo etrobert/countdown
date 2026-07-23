@@ -13,7 +13,7 @@ export default function Card({
 }) {
   const wounded = hp !== undefined && hp < card.hp;
   return (
-    <article className="grid h-[var(--card-h)] w-[var(--card-w)] grid-rows-[auto_1fr_auto] rounded-md border border-ink bg-face p-2.5 shadow-md">
+    <article className="grid h-[var(--card-h)] w-[var(--card-w)] grid-rows-[auto_1fr_auto] rounded-md border border-ink bg-face p-2.5 shadow-md bg-pink-500">
       <span
         // gap-1.5, not the footer's gap-1: the rotated crystal overflows its
         // box at the corners and eats into the gap.
