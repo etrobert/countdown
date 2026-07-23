@@ -8,7 +8,8 @@ import Mana from "./Mana.tsx";
 import { CARDS } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
-import { endTurn, initialState, summonMinion } from "./state.ts";
+import { playSummonSound } from "./sound.ts";
+import { chooseSummon, endTurn, initialState, play } from "./state.ts";
 
 // Seats. The local player's hand is face-up and draggable; the enemy's is a row
 // of card backs. Only two seats today — the board is two-sided — but GameState
@@ -43,13 +44,26 @@ export default function App() {
   // End the human's turn, then drive the enemy's one beat at a time so the
   // player can follow along: passing the turn draws for the enemy, then after a
   // second it summons a minion, and a second later it ends its own turn back to
-  // you.
+  // you. Each beat is computed from the previous one with the pure state
+  // functions — the closure's `state` is only fresh at click time — which is
+  // also how the enemy's pick surfaces here to sound its clip. The plain
+  // setState calls overwrite anything landing mid-sequence, so a card played
+  // during the enemy's turn would be lost (playing off-turn is due to be
+  // blocked anyway).
   async function handleEndTurn() {
-    withViewTransition(() => setState(endTurn));
+    const afterEnd = endTurn(state);
+    withViewTransition(() => setState(afterEnd));
     await sleep(1000);
-    withViewTransition(() => setState((state) => summonMinion(state, ENEMY)));
+    const choice = chooseSummon(afterEnd, ENEMY);
+    const afterSummon = choice
+      ? play(afterEnd, ENEMY, choice.uid, choice.lane)
+      : afterEnd;
+    if (choice) {
+      withViewTransition(() => setState(afterSummon));
+      playSummonSound(choice.card);
+    }
     await sleep(1000);
-    withViewTransition(() => setState(endTurn));
+    withViewTransition(() => setState(endTurn(afterSummon)));
   }
 
   return (
