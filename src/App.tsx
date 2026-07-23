@@ -67,7 +67,12 @@ export default function App() {
   const [attacks, setAttacks] = useState<Map<number, MinionAttack> | null>(
     null,
   );
-  const { drag, dragUid, start } = useDrag(state, setState, YOU);
+  // Set when you try to drop a card you can't afford; passed to your mana bar
+  // so it pulses red, and cleared once the pulse ends.
+  const [manaFlash, setManaFlash] = useState(false);
+  const { drag, dragUid, start } = useDrag(state, setState, YOU, () =>
+    setManaFlash(true),
+  );
 
   const you = state.players[YOU];
   const enemy = state.players[ENEMY];
@@ -183,7 +188,12 @@ export default function App() {
             topUid={you.deck[0]?.uid}
             className="relative"
           />
-          <Mana mana={you.mana} max={you.maxMana} />
+          <Mana
+            mana={you.mana}
+            max={you.maxMana}
+            flash={manaFlash}
+            onFlashEnd={() => setManaFlash(false)}
+          />
         </div>
         <Board
           minions={state.minions}

@@ -15,9 +15,26 @@
   --color-parchment: #f4f1ea;
   --color-face: #fffdf8;
   --color-edge: #8b8397;
+  --color-danger: #dc2626;
   --card-w: 9rem;
   --card-h: 12.5rem;
   --animate-zzz: zzz 2.4s ease-in-out infinite;
+  --animate-mana-flash: mana-flash 0.5s ease-in-out;
+}
+
+/* A red pulse across the mana crystals — you tried to play a card you can't
+   afford. Border and fill flash to danger and settle back. */
+@keyframes mana-flash {
+  0%,
+  100% {
+    border-color: var(--color-ink);
+  }
+  30%,
+  70% {
+    border-color: var(--color-danger);
+    background-color: var(--color-danger);
+    box-shadow: 0 0 6px var(--color-danger);
+  }
 }
 
 /* A single "z" drifting up and fading — a freshly summoned minion is resting
