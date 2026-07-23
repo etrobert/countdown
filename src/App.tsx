@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
 import Deck from "./Deck.tsx";
@@ -21,6 +21,22 @@ export default function App() {
   const you = state.players[YOU];
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
+
+  // Drive the enemy's turn: draw once, pause so the player can watch, then end.
+  // `drawnForTurn` guards the draw against StrictMode's double-invoke in dev
+  // (each enemy turn has a distinct `turn`), while the timeout is always
+  // rescheduled so the turn still ends.
+  const drawnForTurn = useRef(-1);
+
+  useEffect(() => {
+    if (yourTurn) return;
+    if (drawnForTurn.current !== state.turn) {
+      drawnForTurn.current = state.turn;
+      setState((s) => draw(s, ENEMY));
+    }
+    const id = setTimeout(() => setState(endTurn), 2000);
+    return () => clearTimeout(id);
+  }, [yourTurn, state.turn]);
 
   return (
     <main
