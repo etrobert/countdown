@@ -142,71 +142,85 @@ export function canAfford(
   return state.players[playerIndex].mana >= CARDS[card].cost;
 }
 
-/** Ends the active player's turn. First advances that player's minions one cell
- *  toward the enemy end — rightward for seat 0, leftward for everyone else, per
- *  `step` (fronts first, so a column shuffles forward without colliding).
- *  A minion summoned this turn holds its ground: it clears its `summoned` mark
- *  here instead of moving, so it first walks on its owner's next turn.
- *  A minion at the enemy end can walk no further, so instead it attacks that
- *  deck, milling cards equal to its attack and then leaving the board.
- *  When a minion is blocked by an enemy in the cell ahead it attacks instead of
- *  moving: the two trade damage by their `atk`, and anyone dropped to 0 hp dies
- *  and is cleared from the board. A friendly in the way just holds it up — no
- *  friendly fire. Drawing stays a manual action for now. */
-export function endTurn(state: GameState): GameState {
-  const minions = state.minions.map((m) => ({ ...m }));
-  const active = state.activePlayerIndex;
-  const dir = step(active);
-  // Cards each deck loses this turn to enemy minions reaching its face.
-  const milled = new Array(state.players.length).fill(0);
-  // uids of minions that attacked a deck this turn and leave the board.
-  const spent = new Set<number>();
-  for (let lane = 0; lane < LANES; lane++) {
-    minions
-      .filter((m) => m.lane === lane && m.owner === active)
-      // Fronts first: the minion furthest along its direction of travel moves
-      // before the ones behind it, so a packed column steps forward as one.
-      .sort((a, b) => (b.cell - a.cell) * dir)
-      .forEach((m) => {
-        // Just summoned: sit still this turn, then start walking from the next.
-        if (m.summoned) {
-          m.summoned = false;
-          return;
-        }
-        const ahead = m.cell + dir;
-        // Off the far edge: the minion is at the enemy's face and can advance no
-        // further, so it attacks their deck, is spent, and leaves the board.
-        if (ahead < 0 || ahead >= LANE_CELLS) {
-          const opponent = (active + 1) % state.players.length;
-          milled[opponent] += CARDS[m.card].atk;
-          spent.add(m.uid);
-          return;
-        }
-        const other = minions.find((o) => o.lane === lane && o.cell === ahead);
-        // Nothing ahead: walk forward into the open cell.
-        if (!other) {
-          m.cell = ahead;
-          return;
-        }
-        // Blocked by an enemy: the two trade blows by their attack. A friendly
-        // ahead just holds this minion up — no attack, no move.
-        if (other.owner !== m.owner) {
-          m.hp -= CARDS[other.card].atk;
-          other.hp -= CARDS[m.card].atk;
-        }
-      });
-  }
-  // Clear the departed: anyone at 0 hp from combat, or spent attacking a deck,
-  // leaves the board.
-  const survivors = minions.filter((m) => m.hp > 0 && !spent.has(m.uid));
-  const activePlayerIndex = (active + 1) % state.players.length;
-  // Trim each deck by the cards milled from it, and grant the player taking over
-  // their mana for the turn.
-  const players = state.players.map((p, i) => {
-    const trimmed = milled[i] > 0 ? { ...p, deck: p.deck.slice(milled[i]) } : p;
-    return i === activePlayerIndex ? startTurn(trimmed) : trimmed;
+/** Clears a minion's `summoned` mark: it held its ground this turn and walks
+ *  from the next one on. */
+function wake(state: GameState, minion: Minion): GameState {
+  return {
+    ...state,
+    minions: state.minions.map((m) =>
+      m.uid === minion.uid ? { ...m, summoned: false } : m,
+    ),
+  };
+}
+
+/** Walks a minion forward into the open cell ahead. */
+function advance(state: GameState, minion: Minion, cell: number): GameState {
+  return {
+    ...state,
+    minions: state.minions.map((m) =>
+      m.uid === minion.uid ? { ...m, cell } : m,
+    ),
+  };
+}
+
+/** A minion at the enemy's face attacks their deck — milling cards equal to its
+ *  attack — then leaves the board, its charge spent. */
+function raid(state: GameState, minion: Minion): GameState {
+  const opponent = (minion.owner + 1) % state.players.length;
+  const players = state.players.map((p, i) =>
+    i === opponent ? { ...p, deck: p.deck.slice(CARDS[minion.card].atk) } : p,
+  );
+  return {
+    ...state,
+    players,
+    minions: state.minions.filter((m) => m.uid !== minion.uid),
+  };
+}
+
+/** Two enemy minions trade blows by their attack; either one dropped to 0 hp
+ *  dies and leaves the board. */
+function clash(state: GameState, a: Minion, b: Minion): GameState {
+  const damaged = state.minions.map((m) => {
+    if (m.uid === a.uid) return { ...m, hp: m.hp - CARDS[b.card].atk };
+    if (m.uid === b.uid) return { ...m, hp: m.hp - CARDS[a.card].atk };
+    return m;
   });
-  return { ...state, players, minions: survivors, activePlayerIndex };
+  return { ...state, minions: damaged.filter((m) => m.hp > 0) };
+}
+
+/** Resolves one minion's action for the turn, dispatching on what lies ahead:
+ *  wake if it was just summoned, raid the enemy deck at their face, walk into an
+ *  open cell, or clash with an enemy blocking the way. A friendly ahead just
+ *  holds it up. A no-op if the minion already left the board earlier this turn. */
+function stepMinion(state: GameState, uid: number): GameState {
+  const minion = state.minions.find((m) => m.uid === uid);
+  if (!minion) return state;
+  if (minion.summoned) return wake(state, minion);
+  const ahead = minion.cell + step(minion.owner);
+  if (ahead < 0 || ahead >= LANE_CELLS) return raid(state, minion);
+  const other = minionAt(state, minion.lane, ahead);
+  if (!other) return advance(state, minion, ahead);
+  if (other.owner !== minion.owner) return clash(state, minion, other);
+  return state;
+}
+
+/** Ends the active player's turn: each of that player's minions takes its step
+ *  (see `stepMinion`) folded over the state, then the turn passes to the next
+ *  seat, who gets their mana for the turn. Fronts step first — the minion
+ *  furthest along its direction of travel before the ones behind it — so a
+ *  packed column shuffles forward as one. Drawing stays a manual action for now. */
+export function endTurn(state: GameState): GameState {
+  const active = state.activePlayerIndex;
+  const order = state.minions
+    .filter((m) => m.owner === active)
+    .sort((a, b) => (b.cell - a.cell) * step(active))
+    .map((m) => m.uid);
+  const advanced = order.reduce(stepMinion, state);
+  const activePlayerIndex = (active + 1) % state.players.length;
+  const players = advanced.players.map((p, i) =>
+    i === activePlayerIndex ? startTurn(p) : p,
+  );
+  return { ...advanced, activePlayerIndex, players };
 }
 
 /** Picks a uniformly random element of a non-empty array. */
