@@ -7,7 +7,7 @@ export default function Minion({ minion }: { minion: MinionData }) {
   // entries without art have no `art` property at all to narrow against.
   const card: Card = CARDS[minion.card];
   return (
-    <div className="relative flex size-full flex-col overflow-hidden rounded-md border border-ink bg-face p-1 shadow-md">
+    <div className="relative flex size-full flex-col">
       <div className="flex min-h-0 flex-1 items-end justify-center">
         {card.art ? (
           // Sized to a fraction of the sketch's own pixels and stood on the
