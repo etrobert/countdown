@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
@@ -135,6 +135,23 @@ export default function App() {
     await sleep(1000);
     await playTurn(afterSummon);
   }
+
+  // Space and F1 end the turn, mirroring the End Turn button: they fire only
+  // when it's your turn and nothing is animating, over, or drafting — the same
+  // guard the button's `disabled` uses. preventDefault stops the space bar from
+  // scrolling and F1 from opening the browser's help.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== " " && event.key !== "F1") return;
+      if (!yourTurn || busy || over || draft) return;
+      event.preventDefault();
+      handleEndTurn();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // Re-registers each render so the handler closes over fresh state; the
+    // listed deps are the values that gate whether the key does anything.
+  }, [yourTurn, busy, over, draft, state]);
 
   // Leave the draft and start the next battle with the given decklist — the
   // run deck as-is on a pass, or with the picked card appended.
