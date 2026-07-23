@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
@@ -8,6 +8,7 @@ import Mana from "./Mana.tsx";
 import { CARDS } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
+import { playSummonSound } from "./sound.ts";
 import { endTurn, initialState, summonMinion } from "./state.ts";
 
 // Seats. The local player's hand is face-up and draggable; the enemy's is a row
@@ -39,6 +40,18 @@ export default function App() {
   const you = state.players[YOU];
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
+
+  // A minion only enters the list by being summoned, so any uid that wasn't on
+  // the board last render is a fresh spawn — play its summon clip, whether you
+  // dropped it or the enemy did. `seen` carries the previous frame's uids; a
+  // ref (not state) so tracking them doesn't itself trigger a render.
+  const seen = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    for (const minion of state.minions) {
+      if (!seen.current.has(minion.uid)) playSummonSound(minion.card);
+    }
+    seen.current = new Set(state.minions.map((m) => m.uid));
+  }, [state.minions]);
 
   // End the human's turn, then drive the enemy's one beat at a time so the
   // player can follow along: passing the turn draws for the enemy, then after a
