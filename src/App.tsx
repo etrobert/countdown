@@ -64,6 +64,11 @@ export default function App() {
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
   const busy = attacks !== null;
+  // Once a seat decks out the battle is over: freeze every action and let the
+  // overlay take the screen. resolveTurn already no-ops past this point; gating
+  // here also stops card play and skips the enemy's remaining beats.
+  const over = state.winner !== undefined;
+  const youWon = state.winner === YOU;
 
   // Resolve one player's turn from the given state and return the outcome. If
   // blows land, hold the board and play the bumps, then commit the outcome
@@ -92,8 +97,10 @@ export default function App() {
   // enemy's pick surfaces here to sound its clip. Off-turn plays can't land
   // mid-sequence: `canPlay` rejects them once the first beat hands the turn
   // to the enemy, and the hand stops dragging while it isn't your turn.
+  // A deck-out on the first beat ends the battle, so the enemy takes no turn.
   async function handleEndTurn() {
     const afterEnd = await playTurn(state);
+    if (afterEnd.winner !== undefined) return;
     await sleep(1000);
     const choice = chooseSummon(afterEnd, ENEMY);
     const afterSummon = choice
@@ -145,7 +152,7 @@ export default function App() {
       <Hand
         cards={you.hand}
         dragging={dragUid}
-        onDragStart={busy || !yourTurn ? undefined : start}
+        onDragStart={busy || !yourTurn || over ? undefined : start}
       />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
         {yourTurn ? "Your turn" : "Enemy turn"}
@@ -153,10 +160,10 @@ export default function App() {
       <button
         type="button"
         onClick={handleEndTurn}
-        disabled={!yourTurn || busy}
+        disabled={!yourTurn || busy || over}
         className={cn(
           "absolute right-10 bottom-12 rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150",
-          yourTurn && !busy
+          yourTurn && !busy && !over
             ? "cursor-pointer hover:-translate-y-1"
             : "cursor-not-allowed opacity-40",
         )}
@@ -171,6 +178,15 @@ export default function App() {
           style={{ left: drag.x, top: drag.y }}
         >
           <Card card={CARDS[drag.instance.card]} />
+        </div>
+      )}
+      {over && (
+        // A scrim over the frozen board. Reload to play again for now — the
+        // vitality fade and death flourish are a follow-up.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60">
+          <p className="font-bold text-6xl text-parchment">
+            {youWon ? "You win" : "You lose"}
+          </p>
         </div>
       )}
     </main>
