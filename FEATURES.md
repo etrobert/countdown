@@ -28,7 +28,7 @@
 - [x] In between match updates: draft 1 of 3 cards after a win
 - [ ] In between match updates: remove cards
 - [ ] Presentation page
-- [ ] Increase character size on the cards
+- [x] Increase character size on the cards
 - [ ] Music
 - [x] Sounds
 - [x] F1 and Space end turn
