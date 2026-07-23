@@ -25,7 +25,7 @@ export const MAX_MANA = 10;
 
 export const DECK_SIZE = 15;
 
-export const LANES = 5;
+export const LANES = 4;
 
 /** Cells per lane. Cell 0 is your end; a minion walks toward the far end. */
 export const LANE_CELLS = 4;
