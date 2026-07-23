@@ -81,7 +81,10 @@ export const CARDS = {
 /** Identifies a kind of card, not a copy of one — see `CardInstance`. */
 export type CardId = keyof typeof CARDS;
 
-const CARD_IDS = Object.keys(CARDS) as CardId[];
+export const CARD_IDS = Object.keys(CARDS) as CardId[];
+
+/** Cards offered at the between-battles draft; pick one or pass. */
+export const DRAFT_CHOICES = 3;
 
 /** Placeholder: cycles the pool to fill the deck. Real decklists are still open. */
 export const STARTING_DECK: CardId[] = Array.from(
