@@ -9,7 +9,7 @@
 - [x] Minions do not move the turn they are summoned
 - [x] Show a sleep (Zzz) indicator on minions summoned this turn
 - [ ] Minion damaging deck animation
-- [ ] Fix layout shift when hand is empty
+- [x] Fix layout shift when hand is empty
 - [x] Mana
 - [ ] Death/Win condition & animation
 - [ ] First upload of the game online
@@ -27,7 +27,7 @@
 - [x] Show card on minion hover on the board
 - [ ] Presentation page
 - [ ] Music
-- [ ] Sounds
+- [x] Sounds
 - [x] Attack animation
 
 ## Low Priority
