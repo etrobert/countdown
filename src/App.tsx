@@ -8,13 +8,7 @@ import Hand from "./Hand.tsx";
 import { CLASH_MS, type MinionAttack } from "./Minion.tsx";
 import Mana from "./Mana.tsx";
 import Remove from "./Remove.tsx";
-import {
-  CARD_IDS,
-  CARDS,
-  DRAFT_CHOICES,
-  STARTING_DECK,
-  type CardId,
-} from "./balance.ts";
+import { CARDS, STARTING_DECK, type CardId } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
 import { playSummonSound } from "./sound.ts";
@@ -50,15 +44,6 @@ function withViewTransition(update: () => void) {
  *  plain `await` instead of nested timeout callbacks. */
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Rolls a draft offer: DRAFT_CHOICES distinct cards drawn from the pool. */
-function rollDraft(): CardId[] {
-  const pool = [...CARD_IDS];
-  return Array.from(
-    { length: DRAFT_CHOICES },
-    () => pool.splice(Math.floor(Math.random() * pool.length), 1)[0],
-  );
-}
-
 /** Turn each fighter into the bump it plays: everyone strikes the way it
  *  faces — clashers into each other, a milling raider into the deck at the
  *  enemy face. */
@@ -77,8 +62,6 @@ export default function App() {
   // between-battles steps run in order — "draft" (add a card) then "remove"
   // (trim the deck) — before the next battle.
   const [phase, setPhase] = useState<"battle" | "draft" | "remove">("battle");
-  // The cards offered at the draft — only meaningful while phase is "draft".
-  const [draftChoices, setDraftChoices] = useState<CardId[]>([]);
   // While set, the board plays these blows (keyed by uid) and input is blocked;
   // the game state stays put until the animation ends and the outcome commits.
   const [attacks, setAttacks] = useState<Map<number, MinionAttack> | null>(
@@ -171,7 +154,6 @@ export default function App() {
   if (phase === "draft")
     return (
       <Draft
-        choices={draftChoices}
         onPick={(card) => {
           setRunDeck([...runDeck, card]);
           setPhase("remove");
@@ -259,10 +241,7 @@ export default function App() {
           {youWon && (
             <button
               type="button"
-              onClick={() => {
-                setDraftChoices(rollDraft());
-                setPhase("draft");
-              }}
+              onClick={() => setPhase("draft")}
               className="cursor-pointer rounded-md bg-parchment px-4 py-2 font-bold text-ink transition-transform duration-150 hover:-translate-y-1"
             >
               Continue

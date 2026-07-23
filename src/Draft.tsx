@@ -1,18 +1,29 @@
+import { useState } from "react";
 import Card from "./Card.tsx";
-import { CARDS, type CardId } from "./balance.ts";
+import { CARD_IDS, CARDS, DRAFT_CHOICES, type CardId } from "./balance.ts";
+
+/** Rolls a draft offer: DRAFT_CHOICES distinct cards drawn from the pool. */
+function rollDraft(): CardId[] {
+  const pool = [...CARD_IDS];
+  return Array.from(
+    { length: DRAFT_CHOICES },
+    () => pool.splice(Math.floor(Math.random() * pool.length), 1)[0],
+  );
+}
 
 /** The between-battles draft screen: pick one of the offered cards to add to
  *  the run deck, or pass to keep it as it is. Either way the next battle
- *  starts immediately. */
+ *  starts immediately. The offer is rolled once when the screen mounts and
+ *  lives here — App only needs the outcome. */
 export default function Draft({
-  choices,
   onPick,
   onPass,
 }: {
-  choices: CardId[];
   onPick: (card: CardId) => void;
   onPass: () => void;
 }) {
+  const [choices] = useState(rollDraft);
+
   return (
     <main className="grid min-h-screen place-items-center bg-parchment text-ink">
       <div className="grid justify-items-center gap-8">
