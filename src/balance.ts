@@ -18,7 +18,7 @@ export type Card = {
   art: string;
 };
 
-export const HAND_SIZE = 5;
+export const HAND_SIZE = 3;
 
 /** The mana ceiling stops climbing here, so turns don't run away late-game. */
 export const MAX_MANA = 10;
