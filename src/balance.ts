@@ -1,4 +1,5 @@
 import rhinoArt from "./assets/rhino.jpg";
+import steedArt from "./assets/horse.jpg";
 
 /** The printed card: what every copy of it shares. */
 export type Card = {
@@ -26,6 +27,7 @@ export const CARDS = {
   zealot: { name: "Zealot", cost: 3, atk: 5, hp: 3 },
   colossus: { name: "Colossus", cost: 5, atk: 4, hp: 6 },
   rhino: { name: "Rhino", cost: 3, atk: 4, hp: 4, art: rhinoArt },
+  steed: { name: "Steed", cost: 2, atk: 3, hp: 2, art: steedArt },
 } satisfies Record<string, Card>;
 
 /** Identifies a kind of card, not a copy of one — see `CardInstance`. */
