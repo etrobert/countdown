@@ -46,7 +46,7 @@ export function useDrag(
         ?.closest<HTMLElement>("[data-lane]");
       if (!el) return null;
       const lane = Number(el.dataset.lane);
-      return canPlay(stateRef.current, lane) ? lane : null;
+      return canPlay(stateRef.current, lane, playerIndex) ? lane : null;
     };
 
     const onMove = (e: PointerEvent) =>

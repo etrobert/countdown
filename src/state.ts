@@ -84,10 +84,22 @@ export function minionAt(state: GameState, lane: number, cell: number) {
   return state.minions.find((m) => m.lane === lane && m.cell === cell);
 }
 
-/** A card arrives at cell 0, so a lane is only playable while that cell is
- *  free. Mana is not modelled yet, so cost is not checked. */
-export function canPlay(state: GameState, lane: number): boolean {
-  return !minionAt(state, lane, 0);
+/** The cell a player's minions enter on. The board is two-sided: seat 0 is on
+ *  the left and walks rightward from cell 0, everyone else is on the right and
+ *  walks leftward from the far cell. */
+export function entryCell(playerIndex: number): number {
+  return playerIndex === 0 ? 0 : LANE_CELLS - 1;
+}
+
+/** A card arrives on its owner's entry cell, so a lane is only playable for
+ *  that player while that cell is free. Mana is not modelled yet, so cost is
+ *  not checked. */
+export function canPlay(
+  state: GameState,
+  lane: number,
+  playerIndex: number,
+): boolean {
+  return !minionAt(state, lane, entryCell(playerIndex));
 }
 
 /** Ends the active player's turn. First advances that player's minions one cell
@@ -127,7 +139,7 @@ export function summonMinion(
 ): GameState {
   const hand = state.players[playerIndex].hand;
   const openLanes = Array.from({ length: LANES }, (_, lane) => lane).filter(
-    (lane) => canPlay(state, lane),
+    (lane) => canPlay(state, lane, playerIndex),
   );
   if (hand.length === 0 || openLanes.length === 0) return state;
 
@@ -144,7 +156,7 @@ export function play(
 ): GameState {
   const player = state.players[playerIndex];
   const instance = player.hand.find((c) => c.uid === uid);
-  if (!instance || !canPlay(state, lane)) return state;
+  if (!instance || !canPlay(state, lane, playerIndex)) return state;
   const next = withPlayer(state, playerIndex, {
     ...player,
     hand: player.hand.filter((c) => c.uid !== uid),
@@ -157,7 +169,7 @@ export function play(
         ...instance,
         owner: playerIndex,
         lane,
-        cell: 0,
+        cell: entryCell(playerIndex),
         hp: CARDS[instance.card].hp,
       },
     ],
