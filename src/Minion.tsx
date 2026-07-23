@@ -55,7 +55,14 @@ export default function Minion({
   };
 
   return (
-    <div className="group relative flex size-full flex-col" style={style}>
+    // The uid-keyed view-transition-name makes this root its own stacking
+    // context, so the preview's z-40 can't escape it — minions later in DOM
+    // order would paint over the popped card. Raising the whole root on hover
+    // lifts the preview above the other creatures instead.
+    <div
+      className="group relative flex size-full flex-col hover:z-10"
+      style={style}
+    >
       {/* Hover to inspect: the minion's full card pops to the right, centered
           on the cell so the taller card straddles the minion's row. Kept out of
           hit-testing and the a11y tree — it only enlarges what the footer and
