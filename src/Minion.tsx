@@ -12,14 +12,14 @@ export default function Minion({ minion }: { minion: MinionData }) {
   const facingLeft = minion.owner !== 0;
   return (
     <div className="group relative flex size-full flex-col">
-      {/* Hover to inspect: the minion's full card pops to the right, its bottom
-          edge pinned to the cell so the taller card grows upward. Kept out of
+      {/* Hover to inspect: the minion's full card pops to the right, centered
+          on the cell so the taller card straddles the minion's row. Kept out of
           hit-testing and the a11y tree — it only enlarges what the footer and
           art already show. The cell drops pointer-events mid-drag (see Board),
           which stops :hover firing so previews stay out of the drop flow. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-0 left-full z-40 ml-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+        className="pointer-events-none absolute top-1/2 left-full z-40 ml-2 -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
       >
         <Card card={card} hp={minion.hp} />
       </div>
