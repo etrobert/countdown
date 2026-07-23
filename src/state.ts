@@ -15,12 +15,15 @@ export type CardInstance = { uid: number; card: CardId };
 
 /** A card that has been played onto the board. Keeps its `uid` from the hand.
  *  `hp` is current health, the one stat that diverges from the printed card.
- *  `owner` is the seat that played it — it only advances on that player's turn. */
+ *  `owner` is the seat that played it — it only advances on that player's turn.
+ *  `summoned` marks a minion played this turn: it sits still on the turn it
+ *  arrives and only starts walking on its owner's next turn. */
 export type Minion = CardInstance & {
   owner: number;
   lane: number;
   cell: number;
   hp: number;
+  summoned: boolean;
 };
 
 /** One player's private cards. The deck is their life total, the hand is what
@@ -113,6 +116,8 @@ export function canPlay(
  *  toward the enemy end — rightward for seat 0, leftward for everyone else, per
  *  `step` (fronts first, so a column shuffles forward without colliding; blocked
  *  by any minion in the cell ahead), then hands the turn to the next seat.
+ *  A minion summoned this turn holds its ground: it clears its `summoned` mark
+ *  here instead of moving, so it first walks on its owner's next turn.
  *  Drawing stays a manual action for now. */
 export function endTurn(state: GameState): GameState {
   const minions = state.minions.map((m) => ({ ...m }));
@@ -125,6 +130,11 @@ export function endTurn(state: GameState): GameState {
       // before the ones behind it, so a packed column steps forward as one.
       .sort((a, b) => (b.cell - a.cell) * dir)
       .forEach((m) => {
+        // Just summoned: sit still this turn, then start walking from the next.
+        if (m.summoned) {
+          m.summoned = false;
+          return;
+        }
         const ahead = m.cell + dir;
         const blocked = minions.some(
           (o) => o.lane === lane && o.cell === ahead,
@@ -182,6 +192,7 @@ export function play(
         lane,
         cell: entryCell(playerIndex),
         hp: CARDS[instance.card].hp,
+        summoned: true,
       },
     ],
   };
