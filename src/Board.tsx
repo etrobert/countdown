@@ -19,7 +19,7 @@ export default function Board({
   return (
     // Lanes run horizontally and stack vertically: yours advance left to right,
     // theirs right to left.
-    <div className="flex flex-col gap-3 self-center">
+    <div className="flex flex-col gap-1 self-center">
       {Array.from({ length: LANES }, (_, lane) => {
         // A card arrives at cell 0, so a full entry cell blocks the whole lane.
         const playable = dragging && !at(lane, 0);
@@ -37,10 +37,15 @@ export default function Board({
           >
             {Array.from({ length: LANE_CELLS }, (_, cell) => {
               const minion = at(lane, cell);
+              // The cell is only as tall as the lane strip — the empty dashed
+              // box shows that height. A minion keeps the same footprint (so
+              // landing one never resizes the row) but its taller art is
+              // bottom-anchored and unclamped, so it overflows upward and draws
+              // on top of the lane above.
               return (
                 <div
                   key={cell}
-                  className={`size-20 rounded-md ${
+                  className={`h-14 w-20 rounded-md ${
                     minion ? "" : "border border-dashed border-ink/25"
                   }`}
                 >
