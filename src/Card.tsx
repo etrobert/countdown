@@ -1,5 +1,5 @@
 import type { Card as CardData } from "./balance.ts";
-import { BootIcon, HeartIcon, SwordIcon } from "./icons.tsx";
+import { BootIcon, HeartIcon, ManaIcon, SwordIcon } from "./icons.tsx";
 
 export default function Card({
   card,
@@ -14,7 +14,13 @@ export default function Card({
   const wounded = hp !== undefined && hp < card.hp;
   return (
     <article className="grid h-[var(--card-h)] w-[var(--card-w)] grid-rows-[auto_1fr_auto] rounded-md border border-ink bg-face p-2.5 shadow-md">
-      <span className="justify-self-start font-bold">{card.cost}</span>
+      <span
+        className="flex items-center gap-1 justify-self-start font-bold"
+        aria-label={`Cost ${card.cost}`}
+      >
+        <ManaIcon />
+        {card.cost}
+      </span>
       <div className="flex min-h-0 flex-col items-center justify-end gap-1">
         {/* One shared zoom on each sketch's own pixels, with NO per-image max
             clamp — the clamp would flatten every crop to the frame and kill the

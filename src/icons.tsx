@@ -28,6 +28,19 @@ export function BootIcon({ className = "size-4" }: { className?: string }) {
   );
 }
 
+export function ManaIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+      className={className}
+    >
+      <path d="M12 1C12 1 5 10 5 15a7 7 0 0 0 14 0c0-5-7-14-7-14z" />
+    </svg>
+  );
+}
+
 export function HeartIcon({ className = "size-4" }: { className?: string }) {
   return (
     <svg
