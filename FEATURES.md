@@ -13,6 +13,7 @@
 - [ ] Mana
 - [ ] Death/Win condition & animation
 - [ ] First upload of the game online
+- [ ] Fix zoom level
 
 ## Medium Priority
 
