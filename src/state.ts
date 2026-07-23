@@ -1,7 +1,6 @@
 import { shuffle } from "es-toolkit";
 import {
   CARDS,
-  HAND_SIZE,
   LANES,
   LANE_CELLS,
   MAX_MANA,
@@ -54,17 +53,19 @@ export type GameState = {
   winner?: number;
 };
 
-/** Deals a starting hand and deck from a fresh shuffle of the decklist,
- *  numbering copies from `firstUid` so no two players' cards collide — a uid
- *  has to be unique across the whole board. */
+/** Deals a full deck from a fresh shuffle of the decklist, numbering copies from
+ *  `firstUid` so no two players' cards collide — a uid has to be unique across
+ *  the whole board. The hand starts empty: both players draw their opening hand
+ *  card by card once the battle begins (see `dealOpening` in the app), so the
+ *  cards visibly fly out of the deck instead of appearing pre-held. */
 function deal(deckList: CardId[], firstUid: number): Player {
   const cards = shuffle(deckList).map((card, i) => ({
     uid: firstUid + i,
     card,
   }));
   return {
-    hand: cards.slice(0, HAND_SIZE),
-    deck: cards.slice(HAND_SIZE),
+    hand: [],
+    deck: cards,
     // No mana yet: the first turn grants it, via startTurn.
     mana: 0,
     maxMana: 0,
@@ -83,13 +84,10 @@ function startTurn(player: Player): Player {
  *  at each draft. The enemy replays the same starting deck every battle. */
 export function initialState(yourDeck: CardId[] = STARTING_DECK): GameState {
   return {
-    // Seat 0 moves first, so it takes its opening turn — and its first mana —
-    // right away. Everyone else waits for resolveTurn to bring their turn
-    // around.
-    players: [
-      startTurn(deal(yourDeck, 0)),
-      deal(STARTING_DECK, yourDeck.length),
-    ],
+    // Both seats start empty-handed. The app then deals the opening hands card
+    // by card and hands seat 0 its first turn — its mana and turn draw — via
+    // `startActivePlayerTurn`, so the whole open plays out as an animated deal.
+    players: [deal(yourDeck, 0), deal(STARTING_DECK, yourDeck.length)],
     minions: [],
     activePlayerIndex: 0,
   };
@@ -115,6 +113,21 @@ function drawCard(player: Player): Player {
   const [top, ...rest] = player.deck;
   if (!top) return player;
   return { ...player, deck: rest, hand: [...player.hand, top] };
+}
+
+/** Draws one card into a seat's hand — the opening deal's single beat, kept a
+ *  pure state step so the app can commit it inside a View Transition and let the
+ *  card morph out of the deck. */
+export function drawCardFor(state: GameState, playerIndex: number): GameState {
+  return withPlayer(state, playerIndex, drawCard(state.players[playerIndex]));
+}
+
+/** Starts the active player's turn — grants mana and draws for the turn. Used to
+ *  open seat 0's first turn once the opening hands are dealt; `resolveTurn`
+ *  handles it for every turn after. */
+export function startActivePlayerTurn(state: GameState): GameState {
+  const active = state.activePlayerIndex;
+  return withPlayer(state, active, startTurn(state.players[active]));
 }
 
 export function minionAt(state: GameState, lane: number, cell: number) {
