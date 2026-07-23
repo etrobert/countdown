@@ -6,15 +6,15 @@ export default function Card({ card }: { card: CardData }) {
     <article className="grid h-[var(--card-h)] w-[var(--card-w)] grid-rows-[auto_1fr_auto] rounded-md border border-ink bg-face p-2.5 shadow-md">
       <span className="justify-self-start font-bold">{card.cost}</span>
       <div className="flex min-h-0 flex-col items-center justify-end gap-1">
-        {/* Rendered at a shared fraction of its own pixel size, so the
-            compressed relative scale (goblin small, hydra huge) reads across
-            cards instead of every sketch filling the frame. Bottom-aligned by
-            the column's justify-end, giving all figures a common ground line.
-            multiply drops the sketch's paper out against the card face. */}
+        {/* One shared zoom on each sketch's own pixels, with NO per-image max
+            clamp — the clamp would flatten every crop to the frame and kill the
+            relative scale (saper smaller, hydra huge). Bottom-aligned by the
+            column's justify-end for a common ground line; multiply drops the
+            sketch's paper out against the card face. */}
         <img
           src={card.art}
           alt={card.name}
-          className="max-h-full max-w-full rounded-sm mix-blend-multiply [zoom:0.4]"
+          className="rounded-sm mix-blend-multiply [zoom:0.09]"
         />
         <h2 className="text-center text-lg font-bold">{card.name}</h2>
       </div>

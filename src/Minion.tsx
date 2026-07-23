@@ -12,15 +12,17 @@ export default function Minion({ minion }: { minion: MinionData }) {
   return (
     <div className="relative flex size-full flex-col">
       <div className="flex min-h-0 flex-1 items-end justify-center">
-        {/* Sized to a fraction of the sketch's own pixels and stood on the
-            tile floor, so the compressed relative scale reads on the board —
-            a goblin barely fills its cell, a hydra towers. It stands in for
-            the name, carrying the label; multiply drops the paper out. */}
+        {/* One shared zoom on each sketch's own pixels, and NO per-image max
+            clamp — that clamp is what would flatten every crop to the cell and
+            kill the relative scale. Kept off, the crops keep their drawn sizes:
+            saper stays smaller, the hydra towers past its cell. Stood on the
+            tile floor (items-end) for a common ground line; multiply drops the
+            paper out. */}
         <img
           src={card.art}
           alt={card.name}
           className={cn(
-            "max-h-full max-w-full mix-blend-multiply [zoom:0.24]",
+            "mix-blend-multiply [zoom:0.08]",
             facingLeft && "-scale-x-100",
           )}
         />
