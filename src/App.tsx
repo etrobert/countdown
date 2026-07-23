@@ -26,9 +26,10 @@ export default function App() {
   // minion, and after a pause so the player can watch, ends its own turn back
   // to you.
   function handleEndTurn() {
-    setState((s) => {
-      const enemyTurn = endTurn(s);
-      return summonMinion(draw(enemyTurn, ENEMY), ENEMY);
+    setState((state) => {
+      state = endTurn(state);
+      state = draw(state, ENEMY);
+      return summonMinion(state, ENEMY);
     });
     setTimeout(() => setState(endTurn), 2000);
   }
