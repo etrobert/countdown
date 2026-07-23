@@ -73,13 +73,12 @@ export default function App() {
   // The run deck: your decklist for the current battle, growing by one at each
   // draft. Battles reset; this is the only thing that carries across them.
   const [runDeck, setRunDeck] = useState<CardId[]>(STARTING_DECK);
-  // The cards currently offered at the draft — non-null while the add screen
-  // is up, between a won battle and the next one.
-  const [draft, setDraft] = useState<CardId[] | null>(null);
-  // The run deck being trimmed — non-null while the remove screen is up, which
-  // follows the add screen. Holds the post-add deck so the cut applies to what
-  // you just built.
-  const [pruning, setPruning] = useState<CardId[] | null>(null);
+  // Which screen is up. "battle" is the game itself; after a win the two
+  // between-battles steps run in order — "draft" (add a card) then "remove"
+  // (trim the deck) — before the next battle.
+  const [phase, setPhase] = useState<"battle" | "draft" | "remove">("battle");
+  // The cards offered at the draft — only meaningful while phase is "draft".
+  const [draftChoices, setDraftChoices] = useState<CardId[]>([]);
   // While set, the board plays these blows (keyed by uid) and input is blocked;
   // the game state stays put until the animation ends and the outcome commits.
   const [attacks, setAttacks] = useState<Map<number, MinionAttack> | null>(
@@ -148,7 +147,7 @@ export default function App() {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== " " && event.key !== "F1") return;
-      if (!yourTurn || busy || over || draft || pruning) return;
+      if (!yourTurn || busy || over || phase !== "battle") return;
       event.preventDefault();
       handleEndTurn();
     }
@@ -156,34 +155,33 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
     // Re-registers each render so the handler closes over fresh state; the
     // listed deps are the values that gate whether the key does anything.
-  }, [yourTurn, busy, over, draft, pruning, state]);
+  }, [yourTurn, busy, over, phase, state]);
 
-  // Finish the add step and move on to the remove step, carrying the deck the
-  // add produced — the run deck as-is on a pass, or with the picked card added.
-  function toRemoveStep(deck: CardId[]) {
-    setDraft(null);
-    setPruning(deck);
-  }
-
-  // Leave the draft and start the next battle with the given decklist — the
-  // deck left after adding and removing.
+  // Leave the between-battles steps and start the next battle with the given
+  // decklist — the deck left after adding and removing.
   function nextBattle(deck: CardId[]) {
     setRunDeck(deck);
-    setDraft(null);
-    setPruning(null);
     setState(initialState(deck));
+    setPhase("battle");
   }
 
-  if (draft)
+  // The draft adds the picked card straight to the run deck, then hands off to
+  // the remove step; a pass carries the deck through unchanged. The remove step
+  // trims the run deck as it stands after the add.
+  if (phase === "draft")
     return (
       <Draft
-        choices={draft}
-        onPick={(card) => toRemoveStep([...runDeck, card])}
-        onPass={() => toRemoveStep(runDeck)}
+        choices={draftChoices}
+        onPick={(card) => {
+          setRunDeck([...runDeck, card]);
+          setPhase("remove");
+        }}
+        onPass={() => setPhase("remove")}
       />
     );
 
-  if (pruning) return <Remove deck={pruning} onConfirm={nextBattle} />;
+  if (phase === "remove")
+    return <Remove deck={runDeck} onConfirm={nextBattle} />;
 
   return (
     <main
@@ -261,7 +259,10 @@ export default function App() {
           {youWon && (
             <button
               type="button"
-              onClick={() => setDraft(rollDraft())}
+              onClick={() => {
+                setDraftChoices(rollDraft());
+                setPhase("draft");
+              }}
               className="cursor-pointer rounded-md bg-parchment px-4 py-2 font-bold text-ink transition-transform duration-150 hover:-translate-y-1"
             >
               Continue
