@@ -113,6 +113,27 @@ export function endTurn(state: GameState): GameState {
   return { ...state, minions, activePlayerIndex };
 }
 
+/** Picks a uniformly random element of a non-empty array. */
+function pick<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+/** The enemy's summon for one turn: play a random card from hand into a random
+ *  open lane. A placeholder for a real heuristic — a no-op when the hand is
+ *  empty or every entry cell is blocked. */
+export function summonMinion(
+  state: GameState,
+  playerIndex: number,
+): GameState {
+  const hand = state.players[playerIndex].hand;
+  const openLanes = Array.from({ length: LANES }, (_, lane) => lane).filter(
+    (lane) => canPlay(state, lane),
+  );
+  if (hand.length === 0 || openLanes.length === 0) return state;
+
+  return play(state, playerIndex, pick(hand).uid, pick(openLanes));
+}
+
 /** Plays a card from a player's hand into a lane, summoning it at their end of
  *  that lane. */
 export function play(
