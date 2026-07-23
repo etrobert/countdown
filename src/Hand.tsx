@@ -46,9 +46,11 @@ export default function Hand({
   return (
     // Rotation, translate and the hover scale do not grow the layout box, so
     // the hand needs padding to overhang into or it clips the viewport.
+    // min-h reserves a full card's height (plus the pt-16 + pb-12 padding) so an
+    // empty hand keeps the same footprint and the board above/below stays put.
     <div
       className={cn(
-        "flex touch-none items-end justify-center px-8 pt-16 pb-12 select-none",
+        "flex min-h-[calc(var(--card-h)+7rem)] touch-none items-end justify-center px-8 pt-16 pb-12 select-none",
         faceDown && "rotate-180",
       )}
     >
