@@ -4,12 +4,21 @@ import Board from "./Board.tsx";
 import Card from "./Card.tsx";
 import Deck from "./Deck.tsx";
 import Hand from "./Hand.tsx";
+import { CLASH_MS, type MinionAttack } from "./Minion.tsx";
 import Mana from "./Mana.tsx";
 import { CARDS } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
 import { playSummonSound } from "./sound.ts";
-import { chooseSummon, endTurn, initialState, play } from "./state.ts";
+import {
+  chooseSummon,
+  initialState,
+  play,
+  resolveTurn,
+  step,
+  type GameState,
+  type Minion,
+} from "./state.ts";
 
 // Seats. The local player's hand is face-up and draggable; the enemy's is a row
 // of card backs. Only two seats today — the board is two-sided — but GameState
@@ -33,26 +42,58 @@ function withViewTransition(update: () => void) {
  *  plain `await` instead of nested timeout callbacks. */
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Turn each fighter into the bump it plays: everyone strikes the way it
+ *  faces — clashers into each other, a milling raider into the deck at the
+ *  enemy face. */
+function attacksFor(fighters: Minion[]) {
+  return new Map<number, MinionAttack>(
+    fighters.map((m) => [m.uid, step(m.owner)]),
+  );
+}
+
 export default function App() {
   const [state, setState] = useState(initialState);
+  // While set, the board plays these blows (keyed by uid) and input is blocked;
+  // the game state stays put until the animation ends and the outcome commits.
+  const [attacks, setAttacks] = useState<Map<number, MinionAttack> | null>(
+    null,
+  );
   const { drag, dragUid, start } = useDrag(state, setState, YOU);
 
   const you = state.players[YOU];
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
+  const busy = attacks !== null;
+
+  // Resolve one player's turn from the given state and return the outcome. If
+  // blows land, hold the board and play the bumps, then commit the outcome
+  // inside a View Transition so movement and deaths morph; if none land, just
+  // commit. The board doesn't change until the commit, so the held frame is
+  // simply the current one with the bumps layered.
+  async function playTurn(current: GameState): Promise<GameState> {
+    const { state: resolved, fighters } = resolveTurn(current);
+    const next = attacksFor(fighters);
+    if (next.size > 0) {
+      setAttacks(next);
+      await sleep(CLASH_MS);
+    }
+    withViewTransition(() => {
+      setAttacks(null);
+      setState(resolved);
+    });
+    return resolved;
+  }
 
   // End the human's turn, then drive the enemy's one beat at a time so the
-  // player can follow along: passing the turn draws for the enemy, then after a
-  // second it summons a minion, and a second later it ends its own turn back to
-  // you. Each beat is computed from the previous one with the pure state
-  // functions — the closure's `state` is only fresh at click time — which is
-  // also how the enemy's pick surfaces here to sound its clip. The plain
-  // setState calls overwrite anything landing mid-sequence, so a card played
-  // during the enemy's turn would be lost (playing off-turn is due to be
-  // blocked anyway).
+  // player can follow along: your minions act, then a second later the enemy
+  // summons, and a second after that its minions act back to you. Each beat is
+  // computed from the previous one with the pure state functions — the
+  // closure's `state` is only fresh at click time — which is also how the
+  // enemy's pick surfaces here to sound its clip. The plain setState calls
+  // overwrite anything landing mid-sequence, so a card played during the
+  // enemy's turn would be lost (playing off-turn is due to be blocked anyway).
   async function handleEndTurn() {
-    const afterEnd = endTurn(state);
-    withViewTransition(() => setState(afterEnd));
+    const afterEnd = await playTurn(state);
     await sleep(1000);
     const choice = chooseSummon(afterEnd, ENEMY);
     const afterSummon = choice
@@ -63,7 +104,7 @@ export default function App() {
       playSummonSound(choice.card);
     }
     await sleep(1000);
-    withViewTransition(() => setState(endTurn(afterSummon)));
+    await playTurn(afterSummon);
   }
 
   return (
@@ -88,6 +129,7 @@ export default function App() {
         </div>
         <Board
           minions={state.minions}
+          attacks={attacks ?? undefined}
           dragging={drag !== null}
           dragLane={drag?.lane ?? null}
         />
@@ -100,17 +142,21 @@ export default function App() {
           <Mana mana={enemy.mana} max={enemy.maxMana} />
         </div>
       </div>
-      <Hand cards={you.hand} dragging={dragUid} onDragStart={start} />
+      <Hand
+        cards={you.hand}
+        dragging={dragUid}
+        onDragStart={busy ? undefined : start}
+      />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
         {yourTurn ? "Your turn" : "Enemy turn"}
       </div>
       <button
         type="button"
         onClick={handleEndTurn}
-        disabled={!yourTurn}
+        disabled={!yourTurn || busy}
         className={cn(
           "absolute right-10 bottom-12 rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150",
-          yourTurn
+          yourTurn && !busy
             ? "cursor-pointer hover:-translate-y-1"
             : "cursor-not-allowed opacity-40",
         )}

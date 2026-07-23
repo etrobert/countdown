@@ -73,7 +73,8 @@ function startTurn(player: Player): Player {
 export function initialState(): GameState {
   return {
     // Seat 0 moves first, so it takes its opening turn — and its first mana —
-    // right away. Everyone else waits for endTurn to bring their turn around.
+    // right away. Everyone else waits for resolveTurn to bring their turn
+    // around.
     players: [startTurn(deal(0)), deal(DECK_SIZE)],
     minions: [],
     activePlayerIndex: 0,
@@ -185,20 +186,29 @@ function clash(state: GameState, a: Minion, b: Minion): GameState {
   return { ...state, minions: damaged.filter((m) => m.hp > 0) };
 }
 
+/** The state after one minion's step, plus the minions that struck a blow
+ *  making it — both clashers for a clash, the raider for a mill. Movement and
+ *  waking involve no fighters. */
+type StepResult = { state: GameState; fighters?: Minion[] };
+
 /** Resolves one minion's action for the turn, dispatching on what lies ahead:
  *  wake if it was just summoned, raid the enemy deck at their face, walk into an
  *  open cell, or clash with an enemy blocking the way. A friendly ahead just
- *  holds it up. A no-op if the minion already left the board earlier this turn. */
-function stepMinion(state: GameState, uid: number): GameState {
+ *  holds it up. A no-op if the minion already left the board earlier this turn.
+ *  The clash/raid cases also report the fighters, snapshotted as they stood so
+ *  the resolved-away ones can still be animated. */
+function stepMinion(state: GameState, uid: number): StepResult {
   const minion = state.minions.find((m) => m.uid === uid);
-  if (!minion) return state;
-  if (minion.summoned) return wake(state, minion);
+  if (!minion) return { state };
+  if (minion.summoned) return { state: wake(state, minion) };
   const ahead = minion.cell + step(minion.owner);
-  if (ahead < 0 || ahead >= LANE_CELLS) return raid(state, minion);
+  if (ahead < 0 || ahead >= LANE_CELLS)
+    return { state: raid(state, minion), fighters: [minion] };
   const other = minionAt(state, minion.lane, ahead);
-  if (!other) return advance(state, minion, ahead);
-  if (other.owner !== minion.owner) return clash(state, minion, other);
-  return state;
+  if (!other) return { state: advance(state, minion, ahead) };
+  if (other.owner !== minion.owner)
+    return { state: clash(state, minion, other), fighters: [minion, other] };
+  return { state };
 }
 
 /** Ends the active player's turn: each of that player's minions takes its step
@@ -206,19 +216,29 @@ function stepMinion(state: GameState, uid: number): GameState {
  *  seat, who gets their mana for the turn. Fronts step first — the minion
  *  furthest along its direction of travel before the ones behind it — so a
  *  packed column shuffles forward as one. The new active player draws for the
- *  turn in `startTurn`. */
-export function endTurn(state: GameState): GameState {
+ *  turn in `startTurn`. Returns the resolved state alongside the minions that
+ *  struck a blow, in resolve order, so a caller can animate the blows first. */
+export function resolveTurn(state: GameState): {
+  state: GameState;
+  fighters: Minion[];
+} {
   const active = state.activePlayerIndex;
   const order = state.minions
     .filter((m) => m.owner === active)
     .sort((a, b) => (b.cell - a.cell) * step(active))
     .map((m) => m.uid);
-  const advanced = order.reduce(stepMinion, state);
+  const fighters: Minion[] = [];
+  let advanced = state;
+  for (const uid of order) {
+    const result = stepMinion(advanced, uid);
+    advanced = result.state;
+    if (result.fighters) fighters.push(...result.fighters);
+  }
   const activePlayerIndex = (active + 1) % state.players.length;
   const players = advanced.players.map((p, i) =>
     i === activePlayerIndex ? startTurn(p) : p,
   );
-  return { ...advanced, activePlayerIndex, players };
+  return { state: { ...advanced, activePlayerIndex, players }, fighters };
 }
 
 /** Picks a uniformly random element of a non-empty array. */

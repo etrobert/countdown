@@ -36,6 +36,52 @@
   }
 }
 
+/* Attack motion. A minion pulls back a touch (wind-up), strikes toward the
+   blow, then settles home — the same bump for a clash or a mill, whether the
+   minion survives or not (a dead clasher or spent raider is just removed when
+   the outcome commits, right as it lands home). Facing comes in per-minion as
+   a unitless --dir (+1 / -1) so one keyframe serves either side; the
+   per-keyframe timing functions give the wind-up its ease-out drift and the
+   strike its ease-in snap. Duration is set inline from Minion.tsx. */
+@keyframes clash-strike {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+  32% {
+    translate: calc(var(--dir) * -10px) 0;
+    animation-timing-function: ease-in;
+  }
+  55% {
+    /* 40px reaches a touch past the cell seam so contact reads as contact
+       despite the whitespace baked into each sketch — the one dial to tune
+       contact depth by eye. */
+    translate: calc(var(--dir) * 40px) 0;
+    animation-timing-function: ease-out;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+/* Impact cue: an attacking minion's sketch flashes white right as the 55%
+   strike above lands, whitened by filter on the art itself (see Minion.tsx).
+   Runs for the same duration as clash-strike, so contact needs no inline
+   delay — it's these percentages. The implicit 0%/100% frames are the img's
+   own filter: none, which interpolates as the identity list; the 50% frame
+   holds the flash off through the wind-up. The peak also lifts the img out of
+   its multiply blend — white multiplied into the parchment would vanish. */
+@keyframes hit-flash {
+  50% {
+    filter: none;
+  }
+  55%,
+  63% {
+    filter: brightness(0) invert(1);
+    mix-blend-mode: normal;
+  }
+}
+
 /* Hatched paper texture for the back of a deck card. */
 @utility card-back {
   background: repeating-linear-gradient(

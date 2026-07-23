@@ -28,7 +28,7 @@
 - [ ] Presentation page
 - [ ] Music
 - [ ] Sounds
-- [ ] Attack animation
+- [x] Attack animation
 
 ## Low Priority
 
