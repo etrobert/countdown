@@ -18,6 +18,8 @@
 
 ## Medium Priority
 
+- [ ] Fix bug that we can play cards during the enemy turn
+- [ ] Fix bug that the hover card sometimes render below other creatures
 - [ ] In between match updates (gain cards / remove cards)
 - [ ] Define Cost/Attack/Health for our minions
 - [o] Animate draw to show card going from deck to hand
