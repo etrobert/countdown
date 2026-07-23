@@ -14,8 +14,10 @@ import {
 export type CardInstance = { uid: number; card: CardId };
 
 /** A card that has been played onto the board. Keeps its `uid` from the hand.
- *  `hp` is current health, the one stat that diverges from the printed card. */
+ *  `hp` is current health, the one stat that diverges from the printed card.
+ *  `owner` is the seat that played it — it only advances on that player's turn. */
 export type Minion = CardInstance & {
+  owner: number;
   lane: number;
   cell: number;
   hp: number;
@@ -88,15 +90,15 @@ export function canPlay(state: GameState, lane: number): boolean {
   return !minionAt(state, lane, 0);
 }
 
-/** Ends the active player's turn. First advances every minion one cell toward
- *  the far end (fronts first, so a column shuffles forward without colliding),
- *  then hands the turn to the next seat. Drawing stays a manual action for
- *  now. */
+/** Ends the active player's turn. First advances that player's minions one cell
+ *  toward the far end (fronts first, so a column shuffles forward without
+ *  colliding; blocked by any minion in the cell ahead), then hands the turn to
+ *  the next seat. Drawing stays a manual action for now. */
 export function endTurn(state: GameState): GameState {
   const minions = state.minions.map((m) => ({ ...m }));
   for (let lane = 0; lane < LANES; lane++) {
     minions
-      .filter((m) => m.lane === lane)
+      .filter((m) => m.lane === lane && m.owner === state.activePlayerIndex)
       .sort((a, b) => b.cell - a.cell)
       .forEach((m) => {
         const ahead = m.cell + 1;
@@ -130,7 +132,13 @@ export function play(
     ...next,
     minions: [
       ...next.minions,
-      { ...instance, lane, cell: 0, hp: CARDS[instance.card].hp },
+      {
+        ...instance,
+        owner: playerIndex,
+        lane,
+        cell: 0,
+        hp: CARDS[instance.card].hp,
+      },
     ],
   };
 }
