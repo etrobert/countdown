@@ -26,7 +26,7 @@
 - [x] Fix bug that we can play cards during the enemy turn
 - [x] Fix bug that the hover card sometimes render below other creatures
 - [x] In between match updates: draft 1 of 3 cards after a win
-- [ ] In between match updates: remove cards
+- [x] In between match updates: remove cards
 - [ ] Presentation page
 - [x] Increase character size on the cards
 - [ ] Music

@@ -7,6 +7,7 @@ import Draft from "./Draft.tsx";
 import Hand from "./Hand.tsx";
 import { CLASH_MS, type MinionAttack } from "./Minion.tsx";
 import Mana from "./Mana.tsx";
+import Remove from "./Remove.tsx";
 import {
   CARD_IDS,
   CARDS,
@@ -72,9 +73,13 @@ export default function App() {
   // The run deck: your decklist for the current battle, growing by one at each
   // draft. Battles reset; this is the only thing that carries across them.
   const [runDeck, setRunDeck] = useState<CardId[]>(STARTING_DECK);
-  // The cards currently offered at the draft — non-null while the draft screen
+  // The cards currently offered at the draft — non-null while the add screen
   // is up, between a won battle and the next one.
   const [draft, setDraft] = useState<CardId[] | null>(null);
+  // The run deck being trimmed — non-null while the remove screen is up, which
+  // follows the add screen. Holds the post-add deck so the cut applies to what
+  // you just built.
+  const [pruning, setPruning] = useState<CardId[] | null>(null);
   // While set, the board plays these blows (keyed by uid) and input is blocked;
   // the game state stays put until the animation ends and the outcome commits.
   const [attacks, setAttacks] = useState<Map<number, MinionAttack> | null>(
@@ -137,13 +142,13 @@ export default function App() {
   }
 
   // Space and F1 end the turn, mirroring the End Turn button: they fire only
-  // when it's your turn and nothing is animating, over, or drafting — the same
-  // guard the button's `disabled` uses. preventDefault stops the space bar from
-  // scrolling and F1 from opening the browser's help.
+  // when it's your turn and nothing is animating, over, or between battles —
+  // the same guard the button's `disabled` uses. preventDefault stops the space
+  // bar from scrolling and F1 from opening the browser's help.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== " " && event.key !== "F1") return;
-      if (!yourTurn || busy || over || draft) return;
+      if (!yourTurn || busy || over || draft || pruning) return;
       event.preventDefault();
       handleEndTurn();
     }
@@ -151,13 +156,21 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
     // Re-registers each render so the handler closes over fresh state; the
     // listed deps are the values that gate whether the key does anything.
-  }, [yourTurn, busy, over, draft, state]);
+  }, [yourTurn, busy, over, draft, pruning, state]);
+
+  // Finish the add step and move on to the remove step, carrying the deck the
+  // add produced — the run deck as-is on a pass, or with the picked card added.
+  function toRemoveStep(deck: CardId[]) {
+    setDraft(null);
+    setPruning(deck);
+  }
 
   // Leave the draft and start the next battle with the given decklist — the
-  // run deck as-is on a pass, or with the picked card appended.
+  // deck left after adding and removing.
   function nextBattle(deck: CardId[]) {
     setRunDeck(deck);
     setDraft(null);
+    setPruning(null);
     setState(initialState(deck));
   }
 
@@ -165,10 +178,12 @@ export default function App() {
     return (
       <Draft
         choices={draft}
-        onPick={(card) => nextBattle([...runDeck, card])}
-        onPass={() => nextBattle(runDeck)}
+        onPick={(card) => toRemoveStep([...runDeck, card])}
+        onPass={() => toRemoveStep(runDeck)}
       />
     );
+
+  if (pruning) return <Remove deck={pruning} onConfirm={nextBattle} />;
 
   return (
     <main
