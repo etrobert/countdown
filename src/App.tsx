@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
 import Deck from "./Deck.tsx";
+import Draft from "./Draft.tsx";
 import Hand from "./Hand.tsx";
 import { CLASH_MS, type MinionAttack } from "./Minion.tsx";
 import Mana from "./Mana.tsx";
@@ -145,30 +146,11 @@ export default function App() {
 
   if (draft)
     return (
-      <main className="grid min-h-screen place-items-center bg-parchment text-ink">
-        <div className="grid justify-items-center gap-8">
-          <h1 className="font-bold text-4xl">Add a card to your deck</h1>
-          <div className="flex gap-6">
-            {draft.map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => nextBattle([...runDeck, id])}
-                className="cursor-pointer transition-transform duration-150 hover:-translate-y-1"
-              >
-                <Card card={CARDS[id]} />
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => nextBattle(runDeck)}
-            className="cursor-pointer rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150 hover:-translate-y-1"
-          >
-            Pass
-          </button>
-        </div>
-      </main>
+      <Draft
+        choices={draft}
+        onPick={(card) => nextBattle([...runDeck, card])}
+        onPass={() => nextBattle(runDeck)}
+      />
     );
 
   return (
