@@ -91,6 +91,13 @@ export function entryCell(playerIndex: number): number {
   return playerIndex === 0 ? 0 : LANE_CELLS - 1;
 }
 
+/** The direction, in cells per step, a player's minions walk toward the enemy
+ *  end. Mirrors `entryCell`: seat 0 enters at cell 0 and advances rightward
+ *  (+1), everyone else enters at the far cell and advances leftward (-1). */
+export function step(playerIndex: number): number {
+  return playerIndex === 0 ? 1 : -1;
+}
+
 /** A card arrives on its owner's entry cell, so a lane is only playable for
  *  that player while that cell is free. Mana is not modelled yet, so cost is
  *  not checked. */
@@ -103,25 +110,29 @@ export function canPlay(
 }
 
 /** Ends the active player's turn. First advances that player's minions one cell
- *  toward the far end (fronts first, so a column shuffles forward without
- *  colliding; blocked by any minion in the cell ahead), then hands the turn to
- *  the next seat. Drawing stays a manual action for now. */
+ *  toward the enemy end — rightward for seat 0, leftward for everyone else, per
+ *  `step` (fronts first, so a column shuffles forward without colliding; blocked
+ *  by any minion in the cell ahead), then hands the turn to the next seat.
+ *  Drawing stays a manual action for now. */
 export function endTurn(state: GameState): GameState {
   const minions = state.minions.map((m) => ({ ...m }));
+  const active = state.activePlayerIndex;
+  const dir = step(active);
   for (let lane = 0; lane < LANES; lane++) {
     minions
-      .filter((m) => m.lane === lane && m.owner === state.activePlayerIndex)
-      .sort((a, b) => b.cell - a.cell)
+      .filter((m) => m.lane === lane && m.owner === active)
+      // Fronts first: the minion furthest along its direction of travel moves
+      // before the ones behind it, so a packed column steps forward as one.
+      .sort((a, b) => (b.cell - a.cell) * dir)
       .forEach((m) => {
-        const ahead = m.cell + 1;
+        const ahead = m.cell + dir;
         const blocked = minions.some(
           (o) => o.lane === lane && o.cell === ahead,
         );
-        if (ahead < LANE_CELLS && !blocked) m.cell = ahead;
+        if (ahead >= 0 && ahead < LANE_CELLS && !blocked) m.cell = ahead;
       });
   }
-  const activePlayerIndex =
-    (state.activePlayerIndex + 1) % state.players.length;
+  const activePlayerIndex = (active + 1) % state.players.length;
   return { ...state, minions, activePlayerIndex };
 }
 

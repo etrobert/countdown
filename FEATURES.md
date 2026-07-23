@@ -4,7 +4,7 @@
 
 - [x] Make enemy summon minions
 - [x] Flip enemy minions
-- [ ] Make enemy minions move
+- [x] Make enemy minions move
 - [ ] Implement minions attack
 - [ ] Minions do not move the turn they are summoned
 - [ ] Minion damaging deck animation
