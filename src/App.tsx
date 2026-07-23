@@ -38,13 +38,13 @@ export default function App() {
       <Deck
         count={you.deck.length}
         onDraw={() => setState((s) => draw(s, YOU))}
-        className="right-10 bottom-12"
+        className="bottom-12 left-10"
       />
-      <Deck count={enemy.deck.length} className="top-12 left-10" />
+      <Deck count={enemy.deck.length} className="top-12 right-10" />
       <button
         type="button"
         onClick={() => setState(endTurn)}
-        className="absolute bottom-12 left-10 cursor-pointer rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150 hover:-translate-y-1"
+        className="absolute right-10 bottom-12 cursor-pointer rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150 hover:-translate-y-1"
       >
         End Turn
       </button>
