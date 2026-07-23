@@ -41,6 +41,12 @@ export default function App() {
         className="bottom-12 left-10"
       />
       <Deck count={enemy.deck.length} className="top-12 right-10" />
+      <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
+        Turn {state.turn}
+        <span className="block text-sm font-normal">
+          {state.activePlayerIndex === YOU ? "Your turn" : "Enemy turn"}
+        </span>
+      </div>
       <button
         type="button"
         onClick={() => setState(endTurn)}
