@@ -5,7 +5,7 @@
  *  keyframes hold the segment *ratios* (wind-up → strike → settle), and these
  *  set the wall-clock a segment lasts. Keep the two in sync: `CONTACT_MS` must
  *  land on the strike keyframe (55% of `CLASH_MS`), and `COMBAT_MS` must be at
- *  least the longest animation so nothing is cut off before it commits. */
+ *  least the longest single animation so nothing is cut off before it commits. */
 
 /** Wind-up distance: 1/8 of an 80px cell, the little pull-back before the dash. */
 export const RECOIL_PX = 10;
@@ -18,9 +18,13 @@ export const CLASH_LUNGE_PX = 40;
 /** Full clash animation: ~130ms wind-up, ~90ms strike, ~180ms settle. */
 export const CLASH_MS = 400;
 
+/** Full mill animation: ~130ms wind-up, then a longer ~300ms charge across the
+ *  board to the enemy deck. No settle — the raider is spent and leaves. */
+export const MILL_MS = 430;
+
 /** How long the pre-combat board is held on screen, animating, before the
- *  resolved outcome (damage, deaths) commits. The longest animation. */
-export const COMBAT_MS = CLASH_MS;
+ *  resolved outcome (damage, deaths, mills) commits. The longest animation. */
+export const COMBAT_MS = Math.max(CLASH_MS, MILL_MS);
 
 /** When the strike lands — the impact cue (a red flash) fires here. 55% of a
  *  clash, matching the strike keyframe in `style.css`. */

@@ -27,8 +27,8 @@ const YOU = 0;
 const ENEMY = 1;
 
 /** An in-flight combat animation: the board is frozen on `before` while every
- *  minion in `attacks` plays its blow, and `resolved` — the damage and deaths —
- *  commits the moment the animation ends. */
+ *  minion in `attacks` plays its blow, and `resolved` — the damage, deaths and
+ *  mills — commits the moment the animation ends. */
 type Combat = {
   before: Minion[];
   attacks: Map<number, MinionAttack>;
@@ -47,30 +47,41 @@ export default function App() {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // A mill dash aims at the live on-screen position of the deck it hits, so
+  // each deck hands its node down to be measured.
+  const yourDeckRef = useRef<HTMLDivElement>(null);
+  const enemyDeckRef = useRef<HTMLDivElement>(null);
+
   const you = state.players[YOU];
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
   const busy = combat !== null;
 
-  // Turn each landed blow into the animation its minion(s) play: a clash moves
-  // both fighters, each toward the other. A mill still resolves, but its lunge
-  // is a separate feature — for now the raider just leaves when combat commits.
+  // Turn each landed blow into the animation its minion(s) play. A clash moves
+  // both fighters, each toward the other; a mill moves only the raider, aimed
+  // at the deck it struck.
   function attacksFor(events: CombatEvent[], resolved: GameState) {
     const alive = new Set(resolved.minions.map((m) => m.uid));
     const attacks = new Map<number, MinionAttack>();
     for (const event of events) {
-      if (event.kind !== "clash") continue;
-      const { a, b } = event;
-      attacks.set(a.uid, {
-        kind: "clash",
-        dir: step(a.owner),
-        dies: !alive.has(a.uid),
-      });
-      attacks.set(b.uid, {
-        kind: "clash",
-        dir: step(b.owner),
-        dies: !alive.has(b.uid),
-      });
+      if (event.kind === "clash") {
+        const { a, b } = event;
+        attacks.set(a.uid, {
+          kind: "clash",
+          dir: step(a.owner),
+          dies: !alive.has(a.uid),
+        });
+        attacks.set(b.uid, {
+          kind: "clash",
+          dir: step(b.owner),
+          dies: !alive.has(b.uid),
+        });
+      } else {
+        attacks.set(event.attacker.uid, {
+          kind: "mill",
+          deckRef: event.targetSeat === YOU ? yourDeckRef : enemyDeckRef,
+        });
+      }
     }
     return attacks;
   }
@@ -124,11 +135,16 @@ export default function App() {
         onDragStart={busy ? undefined : start}
       />
       <Deck
+        ref={yourDeckRef}
         count={you.deck.length}
         onDraw={() => setState((s) => draw(s, YOU))}
         className="bottom-12 left-10"
       />
-      <Deck count={enemy.deck.length} className="top-12 right-10" />
+      <Deck
+        ref={enemyDeckRef}
+        count={enemy.deck.length}
+        className="top-12 right-10"
+      />
       {/* Each mana bar sits just inward of its owner's deck, out of the card
           stack's footprint. */}
       <Mana
