@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
 import Deck from "./Deck.tsx";
@@ -22,21 +22,12 @@ export default function App() {
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
 
-  // Drive the enemy's turn: draw once, pause so the player can watch, then end.
-  // `drawnForTurn` guards the draw against StrictMode's double-invoke in dev
-  // (each enemy turn has a distinct `turn`), while the timeout is always
-  // rescheduled so the turn still ends.
-  const drawnForTurn = useRef(-1);
-
-  useEffect(() => {
-    if (yourTurn) return;
-    if (drawnForTurn.current !== state.turn) {
-      drawnForTurn.current = state.turn;
-      setState((s) => draw(s, ENEMY));
-    }
-    const id = setTimeout(() => setState(endTurn), 2000);
-    return () => clearTimeout(id);
-  }, [yourTurn, state.turn]);
+  // End the human's turn, then drive the enemy's: it draws, and after a pause
+  // so the player can watch, ends its own turn back to you.
+  function handleEndTurn() {
+    setState((s) => draw(endTurn(s), ENEMY));
+    setTimeout(() => setState(endTurn), 2000);
+  }
 
   return (
     <main
@@ -66,7 +57,7 @@ export default function App() {
       </div>
       <button
         type="button"
-        onClick={() => setState(endTurn)}
+        onClick={handleEndTurn}
         disabled={!yourTurn}
         className={cn(
           "absolute right-10 bottom-12 rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150",
