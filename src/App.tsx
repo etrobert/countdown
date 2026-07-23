@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
 import Deck from "./Deck.tsx";
@@ -15,6 +16,18 @@ import { endTurn, initialState, summonMinion } from "./state.ts";
 const YOU = 0;
 const ENEMY = 1;
 
+/** Applies a state update inside a View Transition when the browser supports
+ *  one. Every card and minion carries a stable `view-transition-name` keyed by
+ *  its uid, so the browser snapshots each one's old and new box and animates
+ *  the difference — a drawn card slides from the deck into the hand, a played
+ *  card from the hand onto the board, with no measurement code of our own.
+ *  `flushSync` forces React to apply the update synchronously, which is the
+ *  DOM change the transition captures. */
+function withViewTransition(update: () => void) {
+  if (!document.startViewTransition) return update();
+  document.startViewTransition(() => flushSync(update));
+}
+
 export default function App() {
   const [state, setState] = useState(initialState);
   const { drag, dragUid, start } = useDrag(state, setState, YOU);
@@ -27,8 +40,10 @@ export default function App() {
   // already drew for it), and after a pause so the player can watch, ends its
   // own turn back to you.
   function handleEndTurn() {
-    setState((state) => summonMinion(endTurn(state), ENEMY));
-    setTimeout(() => setState(endTurn), 2000);
+    withViewTransition(() =>
+      setState((state) => summonMinion(endTurn(state), ENEMY)),
+    );
+    setTimeout(() => withViewTransition(() => setState(endTurn)), 2000);
   }
 
   return (
@@ -44,7 +59,11 @@ export default function App() {
           Each deck's mana bar sits just below its stack. */}
       <div className="flex items-center gap-8">
         <div className="grid justify-items-center gap-3">
-          <Deck count={you.deck.length} className="relative" />
+          <Deck
+            count={you.deck.length}
+            topUid={you.deck[0]?.uid}
+            className="relative"
+          />
           <Mana mana={you.mana} max={you.maxMana} />
         </div>
         <Board
@@ -53,7 +72,11 @@ export default function App() {
           dragLane={drag?.lane ?? null}
         />
         <div className="grid justify-items-center gap-3">
-          <Deck count={enemy.deck.length} className="relative" />
+          <Deck
+            count={enemy.deck.length}
+            topUid={enemy.deck[0]?.uid}
+            className="relative"
+          />
           <Mana mana={enemy.mana} max={enemy.maxMana} />
         </div>
       </div>

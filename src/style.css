@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Pace every View Transition morph (drawn/played cards, moving minions) at the
+   same 400ms ease-out, instead of the browser's default 250ms cross-fade. */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 400ms;
+  animation-timing-function: ease-out;
+}
+
 @theme {
   --font-sans: system-ui, sans-serif;
   --color-ink: #1a1720;
