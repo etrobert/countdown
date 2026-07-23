@@ -14,6 +14,20 @@ export function SwordIcon({ className = "size-4" }: { className?: string }) {
   );
 }
 
+export function BootIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+      className={className}
+    >
+      <path d="M8 2h7v9H8z" />
+      <path d="M8 11v10h13v-4l-6-3v-3z" />
+    </svg>
+  );
+}
+
 export function HeartIcon({ className = "size-4" }: { className?: string }) {
   return (
     <svg

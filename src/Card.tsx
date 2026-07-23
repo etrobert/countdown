@@ -1,5 +1,5 @@
 import type { Card as CardData } from "./balance.ts";
-import { HeartIcon, SwordIcon } from "./icons.tsx";
+import { BootIcon, HeartIcon, SwordIcon } from "./icons.tsx";
 
 export default function Card({
   card,
@@ -35,6 +35,13 @@ export default function Card({
         >
           <SwordIcon />
           {card.atk}
+        </span>
+        <span
+          className="flex items-center gap-1"
+          aria-label={`Movement ${card.movement}`}
+        >
+          <BootIcon />
+          {card.movement}
         </span>
         <span
           className="flex items-center gap-1"

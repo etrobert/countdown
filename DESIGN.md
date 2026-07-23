@@ -20,7 +20,7 @@ into their countdown at a better rate than they do.
 |               |                                                                                                                           |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | Structure     | 3 battles, draft between each. Deck fully resets every battle                                                             |
-| Combat        | Turn-stepped, alternating. 3 lanes × 4 cells                                                                              |
+| Combat        | Turn-stepped, alternating. 4 lanes × 7 cells                                                                              |
 | Minion fights | ATK/HP with persistent damage — blocked minions trade each turn, the survivor walks on wounded                            |
 | Connecting    | Mills = ATK, and the minion dies                                                                                          |
 | Cost          | Growing mana, turn N = N, capped around 5                                                                                 |
@@ -36,13 +36,12 @@ Difficulty lives entirely in the AI's three authored decks, not in its logic.
 
 ## Keywords
 
-- **Fast** — moves 2 cells per turn.
 - **Breach X** — mills X extra on connect, on top of ATK.
 - **Blood price X** — strong stats, but mill X of your own cards to play it.
 
-Each hooks a different step (movement, connect, on-play) and none interact, so
-there is no cross-product to test. Blood price is the one that makes the
-countdown a resource you can choose to spend.
+Each hooks a different step (connect, on-play) and none interact, so there is no
+cross-product to test. Blood price is the one that makes the countdown a
+resource you can choose to spend.
 
 ## Presentation
 
