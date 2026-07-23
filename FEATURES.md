@@ -6,7 +6,7 @@
 - [x] Flip enemy minions
 - [x] Make enemy minions move
 - [ ] Implement minions attack
-- [ ] Minions do not move the turn they are summoned
+- [x] Minions do not move the turn they are summoned
 - [ ] Minion damaging deck animation
 
 ## Medium Priority
