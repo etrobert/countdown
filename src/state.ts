@@ -114,11 +114,13 @@ export function canPlay(
 
 /** Ends the active player's turn. First advances that player's minions one cell
  *  toward the enemy end — rightward for seat 0, leftward for everyone else, per
- *  `step` (fronts first, so a column shuffles forward without colliding; blocked
- *  by any minion in the cell ahead), then hands the turn to the next seat.
+ *  `step` (fronts first, so a column shuffles forward without colliding).
  *  A minion summoned this turn holds its ground: it clears its `summoned` mark
  *  here instead of moving, so it first walks on its owner's next turn.
- *  Drawing stays a manual action for now. */
+ *  When a minion is blocked by an enemy in the cell ahead it attacks instead of
+ *  moving: the two trade damage by their `atk`, and anyone dropped to 0 hp dies
+ *  and is cleared from the board. A friendly in the way just holds it up — no
+ *  friendly fire. Drawing stays a manual action for now. */
 export function endTurn(state: GameState): GameState {
   const minions = state.minions.map((m) => ({ ...m }));
   const active = state.activePlayerIndex;
@@ -136,14 +138,25 @@ export function endTurn(state: GameState): GameState {
           return;
         }
         const ahead = m.cell + dir;
-        const blocked = minions.some(
-          (o) => o.lane === lane && o.cell === ahead,
-        );
-        if (ahead >= 0 && ahead < LANE_CELLS && !blocked) m.cell = ahead;
+        if (ahead < 0 || ahead >= LANE_CELLS) return;
+        const other = minions.find((o) => o.lane === lane && o.cell === ahead);
+        // Nothing ahead: walk forward into the open cell.
+        if (!other) {
+          m.cell = ahead;
+          return;
+        }
+        // Blocked by an enemy: the two trade blows by their attack. A friendly
+        // ahead just holds this minion up — no attack, no move.
+        if (other.owner !== m.owner) {
+          m.hp -= CARDS[other.card].atk;
+          other.hp -= CARDS[m.card].atk;
+        }
       });
   }
+  // Clear the fallen: anyone brought to 0 hp (or below) in combat leaves the board.
+  const survivors = minions.filter((m) => m.hp > 0);
   const activePlayerIndex = (active + 1) % state.players.length;
-  return { ...state, minions, activePlayerIndex };
+  return { ...state, minions: survivors, activePlayerIndex };
 }
 
 /** Picks a uniformly random element of a non-empty array. */
