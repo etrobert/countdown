@@ -31,7 +31,7 @@
 - [ ] Increase character size on the cards
 - [ ] Music
 - [x] Sounds
-- [ ] F1 and Space end turn
+- [x] F1 and Space end turn
 - [ ] Win-all vs Lose-all grilling
 
 ## Low Priority
