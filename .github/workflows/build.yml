@@ -25,3 +25,15 @@ jobs:
       # The self-hosted runner already has Nix.
       - name: Build
         run: nix build .#default --print-build-logs
+
+  lint:
+    name: lint
+    runs-on: [self-hosted, Linux]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      # The self-hosted runner already has Nix.
+      - name: ESLint
+        run: nix build .#checks.x86_64-linux.eslint --print-build-logs

@@ -11,6 +11,10 @@
       ];
 
       forAllSystems = nixpkgs.lib.genAttrs systems;
+
+      # Shared across the package build and the eslint check: both need the full
+      # pnpm dependency set (dev deps included) fetched from the same lockfile.
+      pnpmDepsHash = "sha256-UEx4y8uDV3wDPxu0I5j8QQPeqGDDhE3Jgcx7FqIr26M=";
     in
     {
       packages = forAllSystems (
@@ -33,7 +37,7 @@
             pnpmDeps = pkgs.fetchPnpmDeps {
               inherit (finalAttrs) pname version src;
               fetcherVersion = 4;
-              hash = "sha256-I3OyshUDGMO2TfHsrWziPJkUMO2DZ7VAlNAMlew8P/o=";
+              hash = pnpmDepsHash;
             };
 
             buildPhase = ''
@@ -42,6 +46,40 @@
 
             installPhase = ''
               cp -r dist $out
+            '';
+          });
+        }
+      );
+
+      checks = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          eslint = pkgs.stdenv.mkDerivation (finalAttrs: {
+            pname = "countdown-eslint";
+            version = "0.0.0";
+            src = ./.;
+
+            nativeBuildInputs = [
+              pkgs.nodejs
+              pkgs.pnpm
+              pkgs.pnpmConfigHook
+            ];
+
+            pnpmDeps = pkgs.fetchPnpmDeps {
+              inherit (finalAttrs) pname version src;
+              fetcherVersion = 4;
+              hash = pnpmDepsHash;
+            };
+
+            buildPhase = ''
+              pnpm lint
+            '';
+
+            installPhase = ''
+              touch $out
             '';
           });
         }

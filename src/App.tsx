@@ -143,6 +143,9 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
     // Re-registers each render so the handler closes over fresh state; the
     // listed deps are the values that gate whether the key does anything.
+    // handleEndTurn is a fresh closure each render and already covered by
+    // `state`, so it's deliberately left out of the deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yourTurn, busy, over, phase, state]);
 
   // Leave the between-battles steps and start the next battle with the given
