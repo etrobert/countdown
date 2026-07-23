@@ -1,13 +1,17 @@
 import { LANES, LANE_CELLS } from "./balance.ts";
-import MinionView from "./Minion.tsx";
+import MinionView, { type MinionAttack } from "./Minion.tsx";
 import type { Minion } from "./state.ts";
 
 export default function Board({
   minions,
+  attacks,
   dragging,
   dragLane,
 }: {
   minions: Minion[];
+  /** The blow each minion is playing this beat, keyed by uid — empty when the
+   *  board is at rest. Drives the attack animation (see `Minion`). */
+  attacks?: Map<number, MinionAttack>;
   /** True while a card is being dragged, so valid lanes light up. */
   dragging: boolean;
   /** The playable lane under the pointer, highlighted as the drop target. */
@@ -49,7 +53,12 @@ export default function Board({
                     minion ? "" : "border border-dashed border-ink/25"
                   }`}
                 >
-                  {minion && <MinionView minion={minion} />}
+                  {minion && (
+                    <MinionView
+                      minion={minion}
+                      attack={attacks?.get(minion.uid)}
+                    />
+                  )}
                 </div>
               );
             })}

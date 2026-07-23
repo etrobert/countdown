@@ -1,16 +1,49 @@
+import type { CSSProperties } from "react";
+import { CLASH_LUNGE_PX, CLASH_MS, CONTACT_MS, RECOIL_PX } from "./anim.ts";
 import { CARDS } from "./balance.ts";
 import { HeartIcon, SwordIcon } from "./icons.tsx";
 import { cn } from "./lib/utils.ts";
 import type { Minion as MinionData } from "./state.ts";
 
-export default function Minion({ minion }: { minion: MinionData }) {
+declare module "react" {
+  interface CSSProperties {
+    /** Wind-up / strike offsets fed to the clash keyframes (see style.css). */
+    "--recoil-x"?: string;
+    "--lunge-x"?: string;
+  }
+}
+
+/** The blow a minion is playing this beat, or undefined when it just stands.
+ *  A clash trades with an adjacent enemy — `dir` is its facing (+1 / -1) and
+ *  `dies` picks the settle-home or hold-and-vanish keyframe. */
+export type MinionAttack = { kind: "clash"; dir: number; dies: boolean };
+
+export default function Minion({
+  minion,
+  attack,
+}: {
+  minion: MinionData;
+  attack?: MinionAttack;
+}) {
   const card = CARDS[minion.card];
+
   // The sketches are drawn facing right, which is the way your minions (seat 0)
   // advance. Anyone across the board walks the other way, so mirror their art
   // to face left. Only the art flips — the ATK/HP footer stays readable.
   const facingLeft = minion.owner !== 0;
+
+  // Attack styling: which keyframe to run, for how long, and the fixed
+  // horizontal wind-up/strike offsets for this minion's facing.
+  const animStyle: CSSProperties | undefined = attack && {
+    animationFillMode: "both",
+    animationName: attack.dies ? "clash-kill" : "clash-strike",
+    animationDuration: `${CLASH_MS}ms`,
+    "--recoil-x": `${-attack.dir * RECOIL_PX}px`,
+    "--lunge-x": `${attack.dir * CLASH_LUNGE_PX}px`,
+  };
+
   return (
-    <div className="relative flex size-full flex-col">
+    <div className="relative flex size-full flex-col" style={animStyle}>
       {/* Summoned this turn: it sits still and sleeps. A trio of drifting z's
           signals it can't advance yet — it wakes on its owner's next turn. */}
       {minion.summoned && (
@@ -31,6 +64,16 @@ export default function Minion({ minion }: { minion: MinionData }) {
             </span>
           ))}
         </div>
+      )}
+      {/* Impact cue on a struck minion: a red wash over the body, held off
+          until the strike lands (see the keyframe delay). Only a clash lands a
+          blow on a minion. */}
+      {attack?.kind === "clash" && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-md bg-red-500"
+          style={{ animation: `hit-flash 220ms ${CONTACT_MS}ms both` }}
+        />
       )}
       <div className="flex min-h-0 flex-1 items-end justify-center">
         {/* One shared zoom on each sketch's own pixels, and NO per-image max
