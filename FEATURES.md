@@ -1,0 +1,21 @@
+# Features
+
+## High Priority
+
+- [ ] Make enemy summon minions
+- [ ] Make enemy minions move
+- [ ] Implement minions attack
+- [ ] Minions do not move the turn they are summoned
+- [ ] Minion damaging deck animation
+
+## Medium Priority
+
+- [ ] Animate draw to show card going from deck to hand
+- [ ] Minions have movement points
+
+## Low Priority
+
+- [ ] Minion movement animation
+- [ ] Custom card back
+- [ ] The End Turn button changes color when no action can be taken by the
+      player
