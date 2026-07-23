@@ -25,7 +25,7 @@ export const MAX_MANA = 10;
 
 export const DECK_SIZE = 15;
 
-export const LANES = 3;
+export const LANES = 4;
 
 /** Cells per lane. Cell 0 is your end; a minion walks toward the far end. */
 export const LANE_CELLS = 4;
@@ -37,7 +37,13 @@ export const CARDS = {
   bush: { name: "Bush", cost: 2, atk: 1, hp: 4, art: bushArt },
   zombie: { name: "Zombie", cost: 2, atk: 2, hp: 3, art: zombieArt },
   saper: { name: "Saper", cost: 3, atk: 3, hp: 2, art: saperArt },
-  universman: { name: "Univers Man", cost: 3, atk: 3, hp: 3, art: universmanArt },
+  universman: {
+    name: "Univers Man",
+    cost: 3,
+    atk: 3,
+    hp: 3,
+    art: universmanArt,
+  },
   wizard: { name: "Wizard", cost: 3, atk: 2, hp: 4, art: wizardArt },
   mountdog: { name: "Mount Dog", cost: 4, atk: 4, hp: 3, art: mountdogArt },
   lion: { name: "Lion", cost: 4, atk: 5, hp: 3, art: lionArt },
