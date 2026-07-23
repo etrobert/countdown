@@ -1,3 +1,4 @@
+import { shuffle } from "es-toolkit";
 import {
   CARDS,
   HAND_SIZE,
@@ -53,10 +54,14 @@ export type GameState = {
   winner?: number;
 };
 
-/** Deals a starting hand and deck, numbering copies from `firstUid` so no two
- *  players' cards collide — a uid has to be unique across the whole board. */
+/** Deals a starting hand and deck from a fresh shuffle of the decklist,
+ *  numbering copies from `firstUid` so no two players' cards collide — a uid
+ *  has to be unique across the whole board. */
 function deal(deckList: CardId[], firstUid: number): Player {
-  const cards = deckList.map((card, i) => ({ uid: firstUid + i, card }));
+  const cards = shuffle(deckList).map((card, i) => ({
+    uid: firstUid + i,
+    card,
+  }));
   return {
     hand: cards.slice(0, HAND_SIZE),
     deck: cards.slice(HAND_SIZE),
