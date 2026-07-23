@@ -39,26 +39,25 @@ export default function App() {
       )}
     >
       <Hand cards={enemy.hand} faceDown />
-      <Board
-        minions={state.minions}
-        dragging={drag !== null}
-        dragLane={drag?.lane ?? null}
-      />
+      {/* Decks flank the board at the ends they defend: yours on the left,
+          where your minions spawn and march right; the enemy's on the right.
+          Each deck's mana bar sits just below its stack. */}
+      <div className="flex items-center gap-8">
+        <div className="grid justify-items-center gap-3">
+          <Deck count={you.deck.length} className="relative" />
+          <Mana mana={you.mana} max={you.maxMana} />
+        </div>
+        <Board
+          minions={state.minions}
+          dragging={drag !== null}
+          dragLane={drag?.lane ?? null}
+        />
+        <div className="grid justify-items-center gap-3">
+          <Deck count={enemy.deck.length} className="relative" />
+          <Mana mana={enemy.mana} max={enemy.maxMana} />
+        </div>
+      </div>
       <Hand cards={you.hand} dragging={dragUid} onDragStart={start} />
-      <Deck count={you.deck.length} className="bottom-12 left-10" />
-      <Deck count={enemy.deck.length} className="top-12 right-10" />
-      {/* Each mana bar sits just inward of its owner's deck, out of the card
-          stack's footprint. */}
-      <Mana
-        mana={enemy.mana}
-        max={enemy.maxMana}
-        className="absolute top-16 right-52"
-      />
-      <Mana
-        mana={you.mana}
-        max={you.maxMana}
-        className="absolute bottom-16 left-52"
-      />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
         {yourTurn ? "Your turn" : "Enemy turn"}
       </div>
