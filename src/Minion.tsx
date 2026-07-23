@@ -1,3 +1,4 @@
+import Card from "./Card.tsx";
 import { CARDS } from "./balance.ts";
 import { HeartIcon, SwordIcon } from "./icons.tsx";
 import { cn } from "./lib/utils.ts";
@@ -10,7 +11,18 @@ export default function Minion({ minion }: { minion: MinionData }) {
   // to face left. Only the art flips — the ATK/HP footer stays readable.
   const facingLeft = minion.owner !== 0;
   return (
-    <div className="relative flex size-full flex-col">
+    <div className="group relative flex size-full flex-col">
+      {/* Hover to inspect: the minion's full card pops to the right, centered
+          on the cell so the taller card straddles the minion's row. Kept out of
+          hit-testing and the a11y tree — it only enlarges what the footer and
+          art already show. The cell drops pointer-events mid-drag (see Board),
+          which stops :hover firing so previews stay out of the drop flow. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 left-full z-40 ml-2 -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+      >
+        <Card card={card} hp={minion.hp} />
+      </div>
       {/* Summoned this turn: it sits still and sleeps. A trio of drifting z's
           signals it can't advance yet — it wakes on its owner's next turn. */}
       {minion.summoned && (
