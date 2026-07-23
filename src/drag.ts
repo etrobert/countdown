@@ -6,7 +6,13 @@ import {
   type PointerEvent as ReactPointerEvent,
   type SetStateAction,
 } from "react";
-import { canPlay, play, type CardInstance, type GameState } from "./state.ts";
+import {
+  canAfford,
+  canPlay,
+  play,
+  type CardInstance,
+  type GameState,
+} from "./state.ts";
 
 /** A card in flight from the hand. `x`/`y` track the pointer; `lane` is the
  *  playable lane under it, or null when there is no valid drop target. */
@@ -34,19 +40,24 @@ export function useDrag(
   stateRef.current = state;
 
   const dragUid = drag?.instance.uid ?? null;
+  const dragCard = drag?.instance.card ?? null;
 
   useEffect(() => {
-    if (dragUid === null) return;
+    if (dragUid === null || dragCard === null) return;
 
     // The floating card is pointer-events-none, so elementFromPoint sees the
-    // lane beneath it. A lane is a target only while cell 0 is free.
+    // lane beneath it. A lane is a target only while cell 0 is free and the
+    // player can still afford the dragged card.
     const laneAt = (x: number, y: number): number | null => {
       const el = document
         .elementFromPoint(x, y)
         ?.closest<HTMLElement>("[data-lane]");
       if (!el) return null;
       const lane = Number(el.dataset.lane);
-      return canPlay(stateRef.current, lane, playerIndex) ? lane : null;
+      return canPlay(stateRef.current, lane, playerIndex) &&
+        canAfford(stateRef.current, playerIndex, dragCard)
+        ? lane
+        : null;
     };
 
     const onMove = (e: PointerEvent) =>
@@ -72,7 +83,7 @@ export function useDrag(
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [dragUid, setState, playerIndex]);
+  }, [dragUid, dragCard, setState, playerIndex]);
 
   const start = (instance: CardInstance, e: ReactPointerEvent) =>
     setDrag({ instance, x: e.clientX, y: e.clientY, lane: null });

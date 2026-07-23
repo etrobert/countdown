@@ -28,10 +28,15 @@ export type Minion = CardInstance & {
 
 /** One player's private cards. The deck is their life total, the hand is what
  *  they can act on. Every player shares the board, so minions live on
- *  GameState, not here. */
+ *  GameState, not here.
+ *  `mana` is what is left to spend this turn; `maxMana` is the ceiling it
+ *  refills to at the start of each of the player's turns, and grows by one every
+ *  round — 1 on round 1, 2 on round 2, and so on. */
 export type Player = {
   deck: CardInstance[];
   hand: CardInstance[];
+  mana: number;
+  maxMana: number;
 };
 
 export type GameState = {
@@ -47,12 +52,27 @@ export type GameState = {
  *  players' cards collide — a uid has to be unique across the whole board. */
 function deal(firstUid: number): Player {
   const cards = STARTING_DECK.map((card, i) => ({ uid: firstUid + i, card }));
-  return { hand: cards.slice(0, HAND_SIZE), deck: cards.slice(HAND_SIZE) };
+  return {
+    hand: cards.slice(0, HAND_SIZE),
+    deck: cards.slice(HAND_SIZE),
+    // No mana yet: the first turn grants it, via startTurn.
+    mana: 0,
+    maxMana: 0,
+  };
+}
+
+/** Begins a player's turn: raises their mana ceiling by one — so it tracks the
+ *  round number — and refills mana to that ceiling. */
+function startTurn(player: Player): Player {
+  const maxMana = player.maxMana + 1;
+  return { ...player, maxMana, mana: maxMana };
 }
 
 export function initialState(): GameState {
   return {
-    players: [deal(0), deal(DECK_SIZE)],
+    // Seat 0 moves first, so it takes its opening turn — and its first mana —
+    // right away. Everyone else waits for endTurn to bring their turn around.
+    players: [startTurn(deal(0)), deal(DECK_SIZE)],
     minions: [],
     activePlayerIndex: 0,
   };
@@ -78,6 +98,7 @@ export function draw(state: GameState, playerIndex: number): GameState {
   const [top, ...rest] = player.deck;
   if (!top) return state;
   return withPlayer(state, playerIndex, {
+    ...player,
     deck: rest,
     hand: [...player.hand, top],
   });
@@ -102,14 +123,23 @@ export function step(playerIndex: number): number {
 }
 
 /** A card arrives on its owner's entry cell, so a lane is only playable for
- *  that player while that cell is free. Mana is not modelled yet, so cost is
- *  not checked. */
+ *  that player while that cell is free. This is about the board, not the card —
+ *  whether the player can afford a given card is `canAfford`. */
 export function canPlay(
   state: GameState,
   lane: number,
   playerIndex: number,
 ): boolean {
   return !minionAt(state, lane, entryCell(playerIndex));
+}
+
+/** Whether a player has the mana left this turn to play a given card. */
+export function canAfford(
+  state: GameState,
+  playerIndex: number,
+  card: CardId,
+): boolean {
+  return state.players[playerIndex].mana >= CARDS[card].cost;
 }
 
 /** Ends the active player's turn. First advances that player's minions one cell
@@ -166,13 +196,16 @@ export function endTurn(state: GameState): GameState {
         }
       });
   }
-  const players = state.players.map((p, i) =>
-    milled[i] > 0 ? { ...p, deck: p.deck.slice(milled[i]) } : p,
-  );
   // Clear the departed: anyone at 0 hp from combat, or spent attacking a deck,
   // leaves the board.
   const survivors = minions.filter((m) => m.hp > 0 && !spent.has(m.uid));
   const activePlayerIndex = (active + 1) % state.players.length;
+  // Trim each deck by the cards milled from it, and grant the player taking over
+  // their mana for the turn.
+  const players = state.players.map((p, i) => {
+    const trimmed = milled[i] > 0 ? { ...p, deck: p.deck.slice(milled[i]) } : p;
+    return i === activePlayerIndex ? startTurn(trimmed) : trimmed;
+  });
   return { ...state, players, minions: survivors, activePlayerIndex };
 }
 
@@ -181,21 +214,24 @@ function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-/** The enemy's summon for one turn: play a random card from hand into a random
- *  open lane. A placeholder for a real heuristic — a no-op when the hand is
- *  empty or every entry cell is blocked. */
+/** The enemy's summon for one turn: play a random affordable card from hand into
+ *  a random open lane. A placeholder for a real heuristic — a no-op when nothing
+ *  in hand can be paid for or every entry cell is blocked. */
 export function summonMinion(state: GameState, playerIndex: number): GameState {
-  const hand = state.players[playerIndex].hand;
+  const affordable = state.players[playerIndex].hand.filter((c) =>
+    canAfford(state, playerIndex, c.card),
+  );
   const openLanes = Array.from({ length: LANES }, (_, lane) => lane).filter(
     (lane) => canPlay(state, lane, playerIndex),
   );
-  if (hand.length === 0 || openLanes.length === 0) return state;
+  if (affordable.length === 0 || openLanes.length === 0) return state;
 
-  return play(state, playerIndex, pick(hand).uid, pick(openLanes));
+  return play(state, playerIndex, pick(affordable).uid, pick(openLanes));
 }
 
 /** Plays a card from a player's hand into a lane, summoning it at their end of
- *  that lane. */
+ *  that lane and spending its mana cost. A no-op if the lane is blocked or the
+ *  player cannot afford the card. */
 export function play(
   state: GameState,
   playerIndex: number,
@@ -205,9 +241,11 @@ export function play(
   const player = state.players[playerIndex];
   const instance = player.hand.find((c) => c.uid === uid);
   if (!instance || !canPlay(state, lane, playerIndex)) return state;
+  if (!canAfford(state, playerIndex, instance.card)) return state;
   const next = withPlayer(state, playerIndex, {
     ...player,
     hand: player.hand.filter((c) => c.uid !== uid),
+    mana: player.mana - CARDS[instance.card].cost,
   });
   return {
     ...next,

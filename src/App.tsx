@@ -3,6 +3,7 @@ import Board from "./Board.tsx";
 import Card from "./Card.tsx";
 import Deck from "./Deck.tsx";
 import Hand from "./Hand.tsx";
+import Mana from "./Mana.tsx";
 import { CARDS } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
@@ -54,6 +55,18 @@ export default function App() {
         className="bottom-12 left-10"
       />
       <Deck count={enemy.deck.length} className="top-12 right-10" />
+      {/* Each mana bar sits just inward of its owner's deck, out of the card
+          stack's footprint. */}
+      <Mana
+        mana={enemy.mana}
+        max={enemy.maxMana}
+        className="absolute top-16 right-52"
+      />
+      <Mana
+        mana={you.mana}
+        max={you.maxMana}
+        className="absolute bottom-16 left-52"
+      />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
         {yourTurn ? "Your turn" : "Enemy turn"}
       </div>
