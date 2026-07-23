@@ -81,7 +81,7 @@ export const CARDS = {
 /** Identifies a kind of card, not a copy of one — see `CardInstance`. */
 export type CardId = keyof typeof CARDS;
 
-const CARD_IDS = Object.keys(CARDS) as CardId[];
+const CARD_IDS = Object.keys(CARDS).filter((id): id is CardId => id in CARDS);
 
 /** Placeholder: cycles the pool to fill the deck. Real decklists are still open. */
 export const STARTING_DECK: CardId[] = Array.from(
