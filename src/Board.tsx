@@ -54,7 +54,7 @@ export default function Board({
                   // hover preview (see Minion) can't pop over the drop target;
                   // lane resolution walks the DOM upward, so it is unaffected.
                   className={cn(
-                    "h-14 w-20 rounded-md",
+                    "h-20 w-28 rounded-md",
                     !minion && "border border-dashed border-ink/25",
                     dragging && minion && "pointer-events-none",
                   )}
