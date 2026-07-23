@@ -1,3 +1,5 @@
+import { cn } from "./lib/utils.ts";
+
 declare module "react" {
   interface CSSProperties {
     /** Position of a back within the stack, 0 at the bottom. */
@@ -8,18 +10,27 @@ declare module "react" {
 export default function Deck({
   count,
   onDraw,
+  className,
 }: {
   count: number;
-  onDraw: () => void;
+  /** Omitted for the enemy deck, which is shown but not drawn from here. */
+  onDraw?: () => void;
+  className?: string;
 }) {
+  const interactive = onDraw !== undefined;
   return (
-    <div className="absolute right-10 bottom-12 grid justify-items-center gap-3">
+    <div className={cn("absolute grid justify-items-center gap-3", className)}>
       <button
         type="button"
         onClick={onDraw}
-        disabled={count === 0}
-        aria-label={`Draw a card — ${count} left`}
-        className="relative h-[var(--card-h)] w-[var(--card-w)] cursor-pointer transition-transform duration-150 hover:-translate-y-1 disabled:cursor-default disabled:hover:translate-y-0"
+        disabled={!interactive || count === 0}
+        aria-label={`${interactive ? "Draw a card" : "Enemy deck"} — ${count} left`}
+        className={cn(
+          "relative h-[var(--card-h)] w-[var(--card-w)]",
+          interactive
+            ? "cursor-pointer transition-transform duration-150 hover:-translate-y-1 disabled:cursor-default disabled:hover:translate-y-0"
+            : "cursor-default",
+        )}
       >
         {/* Each back sits slightly above and right of the one below, and
             carries a pale edge so the seams read against the dark face —

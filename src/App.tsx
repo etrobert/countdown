@@ -5,25 +5,42 @@ import Deck from "./Deck.tsx";
 import Hand from "./Hand.tsx";
 import { CARDS } from "./balance.ts";
 import { useDrag } from "./drag.ts";
+import { cn } from "./lib/utils.ts";
 import { draw, endTurn, initialState } from "./state.ts";
+
+// Seats. The local player's hand is face-up and draggable; the enemy's is a row
+// of card backs. Only two seats today — the board is two-sided — but GameState
+// holds a list, so adding more later is a layout problem, not a state one.
+const YOU = 0;
+const ENEMY = 1;
 
 export default function App() {
   const [state, setState] = useState(initialState);
-  const { drag, dragUid, start } = useDrag(state, setState);
+  const { drag, dragUid, start } = useDrag(state, setState, YOU);
+
+  const you = state.players[YOU];
+  const enemy = state.players[ENEMY];
 
   return (
     <main
-      className={`relative grid min-h-screen grid-rows-[1fr_auto] justify-items-center bg-parchment text-ink ${
-        drag ? "cursor-grabbing select-none" : ""
-      }`}
+      className={cn(
+        "relative grid min-h-screen grid-rows-[auto_1fr_auto] justify-items-center bg-parchment text-ink",
+        drag && "cursor-grabbing select-none",
+      )}
     >
+      <Hand cards={enemy.hand} faceDown />
       <Board
         minions={state.minions}
         dragging={drag !== null}
         dragLane={drag?.lane ?? null}
       />
-      <Hand cards={state.hand} dragging={dragUid} onDragStart={start} />
-      <Deck count={state.deck.length} onDraw={() => setState(draw)} />
+      <Hand cards={you.hand} dragging={dragUid} onDragStart={start} />
+      <Deck
+        count={you.deck.length}
+        onDraw={() => setState((s) => draw(s, YOU))}
+        className="right-10 bottom-12"
+      />
+      <Deck count={enemy.deck.length} className="top-12 left-10" />
       <button
         type="button"
         onClick={() => setState(endTurn)}
