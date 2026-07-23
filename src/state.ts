@@ -121,14 +121,18 @@ export function step(playerIndex: number): number {
 }
 
 /** A card arrives on its owner's entry cell, so a lane is only playable for
- *  that player while that cell is free. This is about the board, not the card —
- *  whether the player can afford a given card is `canAfford`. */
+ *  that player on their own turn and while that cell is free. This is about
+ *  the turn and the board, not the card — whether the player can afford a
+ *  given card is `canAfford`. */
 export function canPlay(
   state: GameState,
   lane: number,
   playerIndex: number,
 ): boolean {
-  return !minionAt(state, lane, entryCell(playerIndex));
+  return (
+    state.activePlayerIndex === playerIndex &&
+    !minionAt(state, lane, entryCell(playerIndex))
+  );
 }
 
 /** Whether a player has the mana left this turn to play a given card. */
