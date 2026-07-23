@@ -89,9 +89,9 @@ export default function App() {
   // summons, and a second after that its minions act back to you. Each beat is
   // computed from the previous one with the pure state functions — the
   // closure's `state` is only fresh at click time — which is also how the
-  // enemy's pick surfaces here to sound its clip. The plain setState calls
-  // overwrite anything landing mid-sequence, so a card played during the
-  // enemy's turn would be lost (playing off-turn is due to be blocked anyway).
+  // enemy's pick surfaces here to sound its clip. Off-turn plays can't land
+  // mid-sequence: `canPlay` rejects them once the first beat hands the turn
+  // to the enemy, and the hand stops dragging while it isn't your turn.
   async function handleEndTurn() {
     const afterEnd = await playTurn(state);
     await sleep(1000);
@@ -145,7 +145,7 @@ export default function App() {
       <Hand
         cards={you.hand}
         dragging={dragUid}
-        onDragStart={busy ? undefined : start}
+        onDragStart={busy || !yourTurn ? undefined : start}
       />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
         {yourTurn ? "Your turn" : "Enemy turn"}
