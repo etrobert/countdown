@@ -80,6 +80,22 @@ export function draw(state: GameState, playerIndex: number): GameState {
   });
 }
 
+/** Discards the top `count` cards of a player's deck — the damage a minion deals
+ *  when it connects. The deck is the life total, so a mill spends it faster than
+ *  the one-per-turn baseline. Clamped by an empty deck; running out is a loss,
+ *  which is not modelled yet. */
+export function mill(
+  state: GameState,
+  playerIndex: number,
+  count: number,
+): GameState {
+  const player = state.players[playerIndex];
+  return withPlayer(state, playerIndex, {
+    ...player,
+    deck: player.deck.slice(count),
+  });
+}
+
 export function minionAt(state: GameState, lane: number, cell: number) {
   return state.minions.find((m) => m.lane === lane && m.cell === cell);
 }
@@ -104,25 +120,48 @@ export function canPlay(
 
 /** Ends the active player's turn. First advances that player's minions one cell
  *  toward the far end (fronts first, so a column shuffles forward without
- *  colliding; blocked by any minion in the cell ahead), then hands the turn to
- *  the next seat. Drawing stays a manual action for now. */
+ *  colliding; blocked by any minion in the cell ahead). A minion that marched
+ *  all the way up from its own near-side entry walks off the far edge into the
+ *  enemy's face: it connects, milling that player by its ATK and dying. Then
+ *  hands the turn to the next seat. Drawing stays a manual action for now. */
 export function endTurn(state: GameState): GameState {
   const minions = state.minions.map((m) => ({ ...m }));
+  const connected: Minion[] = [];
   for (let lane = 0; lane < LANES; lane++) {
     minions
       .filter((m) => m.lane === lane && m.owner === state.activePlayerIndex)
       .sort((a, b) => b.cell - a.cell)
       .forEach((m) => {
         const ahead = m.cell + 1;
-        const blocked = minions.some(
-          (o) => o.lane === lane && o.cell === ahead,
-        );
-        if (ahead < LANE_CELLS && !blocked) m.cell = ahead;
+        if (ahead < LANE_CELLS) {
+          const blocked = minions.some(
+            (o) => o.lane === lane && o.cell === ahead,
+          );
+          if (!blocked) m.cell = ahead;
+          return;
+        }
+        // At the far edge. Only a minion that walked up from its own near-side
+        // entry connects — one summoned here is sitting on its own back line.
+        // Step it off the board so a follower can shuffle into the freed cell.
+        if (entryCell(m.owner) === 0) {
+          m.cell = ahead;
+          connected.push(m);
+        }
       });
   }
+
+  let next: GameState = {
+    ...state,
+    minions: minions.filter((m) => !connected.includes(m)),
+  };
+  for (const m of connected) {
+    const enemy = (m.owner + 1) % state.players.length;
+    next = mill(next, enemy, CARDS[m.card].atk);
+  }
+
   const activePlayerIndex =
-    (state.activePlayerIndex + 1) % state.players.length;
-  return { ...state, minions, activePlayerIndex };
+    (next.activePlayerIndex + 1) % next.players.length;
+  return { ...next, activePlayerIndex };
 }
 
 /** Picks a uniformly random element of a non-empty array. */
