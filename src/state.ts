@@ -62,10 +62,10 @@ function deal(firstUid: number): Player {
 }
 
 /** Begins a player's turn: raises their mana ceiling by one — so it tracks the
- *  round number — and refills mana to that ceiling. */
+ *  round number — refills mana to that ceiling, and draws for the turn. */
 function startTurn(player: Player): Player {
   const maxMana = player.maxMana + 1;
-  return { ...player, maxMana, mana: maxMana };
+  return drawCard({ ...player, maxMana, mana: maxMana });
 }
 
 export function initialState(): GameState {
@@ -93,15 +93,10 @@ function withPlayer(
 /** Moves the top card into a player's hand. Drawing is the countdown — the
  *  deck is the life total, so every draw spends one. A no-op on an empty deck;
  *  running out is a loss, which is not modelled yet. */
-export function draw(state: GameState, playerIndex: number): GameState {
-  const player = state.players[playerIndex];
+function drawCard(player: Player): Player {
   const [top, ...rest] = player.deck;
-  if (!top) return state;
-  return withPlayer(state, playerIndex, {
-    ...player,
-    deck: rest,
-    hand: [...player.hand, top],
-  });
+  if (!top) return player;
+  return { ...player, deck: rest, hand: [...player.hand, top] };
 }
 
 export function minionAt(state: GameState, lane: number, cell: number) {
@@ -208,7 +203,8 @@ function stepMinion(state: GameState, uid: number): GameState {
  *  (see `stepMinion`) folded over the state, then the turn passes to the next
  *  seat, who gets their mana for the turn. Fronts step first — the minion
  *  furthest along its direction of travel before the ones behind it — so a
- *  packed column shuffles forward as one. Drawing stays a manual action for now. */
+ *  packed column shuffles forward as one. The new active player draws for the
+ *  turn in `startTurn`. */
 export function endTurn(state: GameState): GameState {
   const active = state.activePlayerIndex;
   const order = state.minions

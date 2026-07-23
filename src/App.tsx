@@ -7,7 +7,7 @@ import Mana from "./Mana.tsx";
 import { CARDS } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
-import { draw, endTurn, initialState, summonMinion } from "./state.ts";
+import { endTurn, initialState, summonMinion } from "./state.ts";
 
 // Seats. The local player's hand is face-up and draggable; the enemy's is a row
 // of card backs. Only two seats today — the board is two-sided — but GameState
@@ -23,15 +23,11 @@ export default function App() {
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
 
-  // End the human's turn, then drive the enemy's: it draws and summons a
-  // minion, and after a pause so the player can watch, ends its own turn back
-  // to you.
+  // End the human's turn, then drive the enemy's: it summons a minion (its turn
+  // already drew for it), and after a pause so the player can watch, ends its
+  // own turn back to you.
   function handleEndTurn() {
-    setState((state) => {
-      state = endTurn(state);
-      state = draw(state, ENEMY);
-      return summonMinion(state, ENEMY);
-    });
+    setState((state) => summonMinion(endTurn(state), ENEMY));
     setTimeout(() => setState(endTurn), 2000);
   }
 
@@ -49,11 +45,7 @@ export default function App() {
         dragLane={drag?.lane ?? null}
       />
       <Hand cards={you.hand} dragging={dragUid} onDragStart={start} />
-      <Deck
-        count={you.deck.length}
-        onDraw={() => setState((s) => draw(s, YOU))}
-        className="bottom-12 left-10"
-      />
+      <Deck count={you.deck.length} className="bottom-12 left-10" />
       <Deck count={enemy.deck.length} className="top-12 right-10" />
       {/* Each mana bar sits just inward of its owner's deck, out of the card
           stack's footprint. */}
