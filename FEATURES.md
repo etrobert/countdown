@@ -20,7 +20,7 @@
 
 - [ ] In between match updates (gain cards / remove cards)
 - [ ] Define Cost/Attack/Health for our minions
-- [o] Animate draw to show card going from deck to hand
+- [x] Animate draw to show card going from deck to hand
 - [ ] Minions have movement points
 - [x] Show card on minion hover on the board
 - [ ] Presentation page

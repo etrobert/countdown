@@ -9,6 +9,24 @@
   --card-w: 9rem;
   --card-h: 12.5rem;
   --animate-zzz: zzz 2.4s ease-in-out infinite;
+  --animate-deal: deal 0.4s ease-out;
+}
+
+/* A drawn card flying in from the deck to its place in the fan. Animates
+   `transform` only, which composes with the fan's own `translate`/`rotate`/
+   `scale` (individual properties) instead of overwriting them. The offset
+   points down-left, toward the player's deck in the bottom-left corner; the
+   enemy hand is `rotate-180`, so the same local offset points up-right toward
+   its deck. Runs once, on mount — and a card only ever mounts when drawn. */
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translate(-6rem, 4rem) scale(0.6) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* A single "z" drifting up and fading — a freshly summoned minion is resting

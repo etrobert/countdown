@@ -62,7 +62,7 @@ export default function Hand({
               key={instance.uid}
               aria-hidden
               className={cn(
-                "card-back relative h-[var(--card-h)] w-[var(--card-w)] rounded-md border border-edge not-first:-ml-16",
+                "card-back animate-deal relative h-[var(--card-h)] w-[var(--card-w)] rounded-md border border-edge not-first:-ml-16",
                 FANNED,
               )}
               style={style}
@@ -77,7 +77,7 @@ export default function Hand({
             // from fighting the pointer drag.
             onDragStart={(e) => e.preventDefault()}
             className={cn(
-              "relative transition-[rotate,translate,scale] duration-150 ease-in-out not-first:-ml-16 hover:z-10 hover:-translate-y-10 hover:rotate-0 hover:scale-115",
+              "animate-deal relative transition-[rotate,translate,scale] duration-150 ease-in-out not-first:-ml-16 hover:z-10 hover:-translate-y-10 hover:rotate-0 hover:scale-115",
               FANNED,
               dragging === instance.uid
                 ? "cursor-grabbing opacity-0"
