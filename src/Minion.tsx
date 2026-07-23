@@ -8,21 +8,24 @@ export default function Minion({ minion }: { minion: MinionData }) {
   const card: Card = CARDS[minion.card];
   return (
     <div className="relative flex size-full flex-col overflow-hidden rounded-md border border-ink bg-face p-1 shadow-md">
-      {card.art ? (
-        // Fills the tile and stands in for the name, so it carries the label.
-        <img
-          src={card.art}
-          alt={card.name}
-          className="absolute inset-0 size-full object-cover mix-blend-multiply"
-        />
-      ) : (
-        <span className="truncate text-center text-xs font-bold">
-          {card.name}
-        </span>
-      )}
-      {/* `relative` lifts the stats above the absolutely-placed art; `mt-auto`
-          holds them at the bottom whether or not a name renders above. */}
-      <footer className="relative mt-auto flex justify-between text-xs font-bold">
+      <div className="flex min-h-0 flex-1 items-end justify-center">
+        {card.art ? (
+          // Sized to a fraction of the sketch's own pixels and stood on the
+          // tile floor, so the compressed relative scale reads on the board —
+          // a goblin barely fills its cell, a hydra towers. It stands in for
+          // the name, carrying the label; multiply drops the paper out.
+          <img
+            src={card.art}
+            alt={card.name}
+            className="max-h-full max-w-full mix-blend-multiply [zoom:0.24]"
+          />
+        ) : (
+          <span className="truncate text-center text-xs font-bold">
+            {card.name}
+          </span>
+        )}
+      </div>
+      <footer className="relative flex justify-between text-xs font-bold">
         <span
           className="flex items-center gap-0.5"
           aria-label={`Attack ${card.atk}`}
