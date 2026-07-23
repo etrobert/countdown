@@ -15,7 +15,9 @@ export default function Card({
   return (
     <article className="grid h-[var(--card-h)] w-[var(--card-w)] grid-rows-[auto_1fr_auto] rounded-md border border-ink bg-face p-2.5 shadow-md">
       <span
-        className="flex items-center gap-1 justify-self-start font-bold"
+        // gap-1.5, not the footer's gap-1: the rotated crystal overflows its
+        // box at the corners and eats into the gap.
+        className="flex items-center gap-1.5 justify-self-start font-bold"
         aria-label={`Cost ${card.cost}`}
       >
         <ManaIcon />

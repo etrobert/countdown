@@ -1,3 +1,5 @@
+import { cn } from "./lib/utils.ts";
+
 export function SwordIcon({ className = "size-4" }: { className?: string }) {
   return (
     <svg
@@ -28,16 +30,13 @@ export function BootIcon({ className = "size-4" }: { className?: string }) {
   );
 }
 
-export function ManaIcon({ className = "size-4" }: { className?: string }) {
+export function ManaIcon({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
+    <span
       aria-hidden
-      className={className}
-    >
-      <path d="M12 1C12 1 5 10 5 15a7 7 0 0 0 14 0c0-5-7-14-7-14z" />
-    </svg>
+      // A mana crystal: a rotated rounded square, not an svg like the others.
+      className={cn("size-3 rotate-45 rounded-[2px] bg-current", className)}
+    />
   );
 }
 
