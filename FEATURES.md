@@ -21,7 +21,7 @@
 - [ ] Define Cost/Attack/Health for our minions
 - [ ] Animate draw to show card going from deck to hand
 - [ ] Minions have movement points
-- [ ] Show card on minion hover on the board
+- [x] Show card on minion hover on the board
 - [ ] Presentation page
 - [ ] Music
 - [ ] Sounds
