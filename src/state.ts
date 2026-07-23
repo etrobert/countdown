@@ -163,7 +163,7 @@ function wake(state: GameState, minion: Minion): GameState {
   };
 }
 
-/** Walks a minion forward into the open cell ahead. */
+/** Walks a minion forward to the given cell. */
 function advance(state: GameState, minion: Minion, cell: number): GameState {
   return {
     ...state,
@@ -204,11 +204,11 @@ function clash(state: GameState, a: Minion, b: Minion): GameState {
 type StepResult = { state: GameState; fighters?: Minion[] };
 
 /** Resolves one minion's action for the turn, dispatching on what lies ahead:
- *  wake if it was just summoned, raid the enemy deck at their face, walk into an
- *  open cell, or clash with an enemy blocking the way. A friendly ahead just
- *  holds it up. A no-op if the minion already left the board earlier this turn.
- *  The clash/raid cases also report the fighters, snapshotted as they stood so
- *  the resolved-away ones can still be animated. */
+ *  wake if it was just summoned, raid the enemy deck at their face, walk up to
+ *  its movement in open cells, or clash with an enemy blocking the way. A
+ *  friendly ahead just holds it up. A no-op if the minion already left the
+ *  board earlier this turn. The clash/raid cases also report the fighters,
+ *  snapshotted as they stood so the resolved-away ones can still be animated. */
 function stepMinion(state: GameState, uid: number): StepResult {
   const minion = state.minions.find((m) => m.uid === uid);
   if (!minion) return { state };
@@ -217,7 +217,19 @@ function stepMinion(state: GameState, uid: number): StepResult {
   if (ahead < 0 || ahead >= LANE_CELLS)
     return { state: raid(state, minion), fighters: [minion] };
   const other = minionAt(state, minion.lane, ahead);
-  if (!other) return { state: advance(state, minion, ahead) };
+  if (!other) {
+    // Walk forward one cell per movement point, stopping short of the first
+    // occupied cell and at the lane's last cell — raiding and clashing only
+    // happen on a turn where the obstacle stands directly ahead at the start.
+    let cell = ahead;
+    for (let left = CARDS[minion.card].movement - 1; left > 0; left--) {
+      const next = cell + step(minion.owner);
+      if (next < 0 || next >= LANE_CELLS) break;
+      if (minionAt(state, minion.lane, next)) break;
+      cell = next;
+    }
+    return { state: advance(state, minion, cell) };
+  }
   if (other.owner !== minion.owner)
     return { state: clash(state, minion, other), fighters: [minion, other] };
   return { state };
