@@ -55,7 +55,12 @@ export default function Hand({
       )}
     >
       {cards.map((instance, i) => {
-        const style = fan(i, cards.length);
+        // The transition name (keyed by uid) is what lets the browser morph
+        // this card from the deck as it is drawn, and reshuffle the fan.
+        const style = {
+          ...fan(i, cards.length),
+          viewTransitionName: `card-${instance.uid}`,
+        };
         if (faceDown)
           return (
             <div

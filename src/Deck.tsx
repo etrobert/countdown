@@ -11,11 +11,15 @@ export default function Deck({
   count,
   onDraw,
   className,
+  topUid,
 }: {
   count: number;
   /** Omitted for the enemy deck, which is shown but not drawn from here. */
   onDraw?: () => void;
   className?: string;
+  /** uid of the card on top — the next to be drawn. The top back carries its
+   *  `view-transition-name` so a draw morphs this card into its hand slot. */
+  topUid?: number;
 }) {
   const interactive = onDraw !== undefined;
   return (
@@ -39,7 +43,15 @@ export default function Deck({
         <div
           key={i}
           className="card-back absolute inset-0 translate-x-[calc(var(--depth)*0.5px)] translate-y-[calc(var(--depth)*-3px)] rounded-md border border-edge"
-          style={{ "--depth": i }}
+          // The topmost back (highest depth) stands in for the next card, so it
+          // wears that card's transition name and morphs into the hand on draw.
+          style={{
+            "--depth": i,
+            viewTransitionName:
+              i === count - 1 && topUid !== undefined
+                ? `card-${topUid}`
+                : undefined,
+          }}
         />
       ))}
       {/* The count is the countdown itself — your remaining life. It reads as

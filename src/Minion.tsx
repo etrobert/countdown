@@ -11,7 +11,12 @@ export default function Minion({ minion }: { minion: MinionData }) {
   // to face left. Only the art flips — the ATK/HP footer stays readable.
   const facingLeft = minion.owner !== 0;
   return (
-    <div className="group relative flex size-full flex-col">
+    // Same uid-keyed transition name as the card in hand, so playing it morphs
+    // the card onto the board, and later moves/deaths animate too.
+    <div
+      className="group relative flex size-full flex-col"
+      style={{ viewTransitionName: `card-${minion.uid}` }}
+    >
       {/* Hover to inspect: the minion's full card pops to the right, centered
           on the cell so the taller card straddles the minion's row. Kept out of
           hit-testing and the a11y tree — it only enlarges what the footer and
