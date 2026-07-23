@@ -11,7 +11,7 @@
 - [x] Minion damaging deck animation
 - [x] Fix layout shift when hand is empty
 - [x] Mana
-- [ ] Death/Win condition & animation
+- [x] Death/Win condition & animation
 - [x] First upload of the game online
 - [ ] Fix zoom level / Increase board size compared to cards
 - [x] auto/restrict drawing
