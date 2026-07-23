@@ -53,10 +53,24 @@ export type GameState = {
   winner?: number;
 };
 
-/** Deals a starting hand and deck, numbering copies from `firstUid` so no two
- *  players' cards collide — a uid has to be unique across the whole board. */
+/** Fisher–Yates shuffle, returning a new array. */
+function shuffle<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/** Deals a starting hand and deck from a fresh shuffle of the decklist,
+ *  numbering copies from `firstUid` so no two players' cards collide — a uid
+ *  has to be unique across the whole board. */
 function deal(deckList: CardId[], firstUid: number): Player {
-  const cards = deckList.map((card, i) => ({ uid: firstUid + i, card }));
+  const cards = shuffle(deckList).map((card, i) => ({
+    uid: firstUid + i,
+    card,
+  }));
   return {
     hand: cards.slice(0, HAND_SIZE),
     deck: cards.slice(HAND_SIZE),
