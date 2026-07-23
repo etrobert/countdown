@@ -77,10 +77,8 @@ export default function App() {
   // so it pulses red, and cleared once the pulse ends.
   const [manaFlash, setManaFlash] = useState(false);
   // True while the opening hands are being dealt out, card by card. Input is
-  // blocked until the deal finishes and seat 0's first turn opens. Bumped once
-  // per battle by `battleId` so a fresh battle re-runs the deal.
+  // blocked until the deal finishes and seat 0's first turn opens.
   const [dealing, setDealing] = useState(true);
-  const [battleId, setBattleId] = useState(0);
   const { drag, dragUid, start } = useDrag(state, setState, YOU, () =>
     setManaFlash(true),
   );
@@ -111,18 +109,19 @@ export default function App() {
     setDealing(false);
   }
 
-  // Run the opening deal once per battle. The ref guard makes it fire a single
-  // time per `battleId` even though StrictMode double-invokes effects in dev,
-  // which would otherwise deal two hands.
-  const dealtBattle = useRef(-1);
+  // Deal the opening hands once each time the battle screen comes up — at start
+  // and after every between-battles reset. `dealt` guards against a repeat:
+  // nextBattle clears it for the next deal, and it survives StrictMode's dev
+  // double-invocation of the effect, which would otherwise deal two hands.
+  const dealt = useRef(false);
   useEffect(() => {
-    if (dealtBattle.current === battleId) return;
-    dealtBattle.current = battleId;
+    if (phase !== "battle" || dealt.current) return;
+    dealt.current = true;
     dealOpening();
-    // dealOpening only ever draws from the freshly-initialised state via
-    // functional setState updates, so it needs no other reactive deps.
+    // dealOpening draws from the freshly-initialised state via functional
+    // setState updates, so it needs no reactive deps beyond the phase switch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battleId]);
+  }, [phase]);
 
   // Resolve one player's turn from the given state and return the outcome. If
   // blows land, hold the board and play the bumps, then commit the outcome
@@ -191,7 +190,7 @@ export default function App() {
     setRunDeck(deck);
     setState(initialState(deck));
     setDealing(true);
-    setBattleId((id) => id + 1);
+    dealt.current = false;
     setPhase("battle");
   }
 
