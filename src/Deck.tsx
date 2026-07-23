@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { cn } from "./lib/utils.ts";
 
 declare module "react" {
@@ -11,15 +12,19 @@ export default function Deck({
   count,
   onDraw,
   className,
+  ref,
 }: {
   count: number;
   /** Omitted for the enemy deck, which is shown but not drawn from here. */
   onDraw?: () => void;
   className?: string;
+  /** The stack element, so the hand can fly a drawn card in from here. */
+  ref?: Ref<HTMLButtonElement>;
 }) {
   const interactive = onDraw !== undefined;
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onDraw}
       disabled={!interactive || count === 0}

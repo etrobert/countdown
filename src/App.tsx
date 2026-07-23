@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
 import Deck from "./Deck.tsx";
@@ -19,6 +19,11 @@ export default function App() {
   const [state, setState] = useState(initialState);
   const { drag, dragUid, start } = useDrag(state, setState, YOU);
 
+  // A drawn card flies in from its owner's deck, so each hand needs to know
+  // where that deck sits on screen.
+  const youDeckRef = useRef<HTMLButtonElement>(null);
+  const enemyDeckRef = useRef<HTMLButtonElement>(null);
+
   const you = state.players[YOU];
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
@@ -38,13 +43,13 @@ export default function App() {
         drag && "cursor-grabbing select-none",
       )}
     >
-      <Hand cards={enemy.hand} faceDown />
+      <Hand cards={enemy.hand} faceDown originRef={enemyDeckRef} />
       {/* Decks flank the board at the ends they defend: yours on the left,
           where your minions spawn and march right; the enemy's on the right.
           Each deck's mana bar sits just below its stack. */}
       <div className="flex items-center gap-8">
         <div className="grid justify-items-center gap-3">
-          <Deck count={you.deck.length} className="relative" />
+          <Deck ref={youDeckRef} count={you.deck.length} className="relative" />
           <Mana mana={you.mana} max={you.maxMana} />
         </div>
         <Board
@@ -53,11 +58,20 @@ export default function App() {
           dragLane={drag?.lane ?? null}
         />
         <div className="grid justify-items-center gap-3">
-          <Deck count={enemy.deck.length} className="relative" />
+          <Deck
+            ref={enemyDeckRef}
+            count={enemy.deck.length}
+            className="relative"
+          />
           <Mana mana={enemy.mana} max={enemy.maxMana} />
         </div>
       </div>
-      <Hand cards={you.hand} dragging={dragUid} onDragStart={start} />
+      <Hand
+        cards={you.hand}
+        dragging={dragUid}
+        onDragStart={start}
+        originRef={youDeckRef}
+      />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
         {yourTurn ? "Your turn" : "Enemy turn"}
       </div>
