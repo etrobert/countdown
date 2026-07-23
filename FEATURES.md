@@ -14,7 +14,7 @@
 - [ ] Death/Win condition & animation
 - [ ] First upload of the game online
 - [ ] Fix zoom level
-- [o] auto/restrict drawing
+- [x] auto/restrict drawing
 
 ## Medium Priority
 
