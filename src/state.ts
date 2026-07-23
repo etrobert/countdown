@@ -36,10 +36,6 @@ export type GameState = {
   minions: Minion[];
   /** Seat index of the player whose turn it is. */
   activePlayerIndex: number;
-  /** Full rounds elapsed, counting from 1. Ticks up each time the turn wraps
-   *  back to seat 0, so both players share a turn number — this is what will
-   *  drive mana later (mana = min(turn, cap)). */
-  turn: number;
 };
 
 /** Deals a starting hand and deck, numbering copies from `firstUid` so no two
@@ -54,7 +50,6 @@ export function initialState(): GameState {
     players: [deal(0), deal(DECK_SIZE)],
     minions: [],
     activePlayerIndex: 0,
-    turn: 1,
   };
 }
 
@@ -95,8 +90,8 @@ export function canPlay(state: GameState, lane: number): boolean {
 
 /** Ends the active player's turn. First advances every minion one cell toward
  *  the far end (fronts first, so a column shuffles forward without colliding),
- *  then hands the turn to the next seat. The turn number ticks up when the
- *  hand-off wraps back to seat 0. Drawing stays a manual action for now. */
+ *  then hands the turn to the next seat. Drawing stays a manual action for
+ *  now. */
 export function endTurn(state: GameState): GameState {
   const minions = state.minions.map((m) => ({ ...m }));
   for (let lane = 0; lane < LANES; lane++) {
@@ -113,8 +108,7 @@ export function endTurn(state: GameState): GameState {
   }
   const activePlayerIndex =
     (state.activePlayerIndex + 1) % state.players.length;
-  const turn = activePlayerIndex === 0 ? state.turn + 1 : state.turn;
-  return { ...state, minions, activePlayerIndex, turn };
+  return { ...state, minions, activePlayerIndex };
 }
 
 /** Plays a card from a player's hand into a lane, summoning it at their end of

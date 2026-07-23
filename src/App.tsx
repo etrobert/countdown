@@ -50,10 +50,7 @@ export default function App() {
       />
       <Deck count={enemy.deck.length} className="top-12 right-10" />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
-        Turn {state.turn}
-        <span className="block text-sm font-normal">
-          {yourTurn ? "Your turn" : "Enemy turn"}
-        </span>
+        {yourTurn ? "Your turn" : "Enemy turn"}
       </div>
       <button
         type="button"
