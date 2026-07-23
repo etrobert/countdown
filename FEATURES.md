@@ -8,12 +8,12 @@
 - [x] Implement minions attack
 - [x] Minions do not move the turn they are summoned
 - [x] Show a sleep (Zzz) indicator on minions summoned this turn
-- [ ] Minion damaging deck animation
+- [x] Minion damaging deck animation
 - [x] Fix layout shift when hand is empty
 - [x] Mana
 - [ ] Death/Win condition & animation
-- [ ] First upload of the game online
-- [ ] Fix zoom level
+- [x] First upload of the game online
+- [ ] Fix zoom level / Increase board size compared to cards
 - [x] auto/restrict drawing
 
 ## Medium Priority
@@ -22,18 +22,19 @@
 - [ ] Fix bug that the hover card sometimes render below other creatures
 - [ ] In between match updates (gain cards / remove cards)
 - [ ] Define Cost/Attack/Health for our minions
-- [o] Animate draw to show card going from deck to hand
+- [x] Animate draw to show card going from deck to hand
 - [ ] Minions have movement points
 - [x] Show card on minion hover on the board
 - [ ] Presentation page
 - [ ] Music
 - [x] Sounds
 - [x] Attack animation
+- [ ] F1 and Space end turn
 
 ## Low Priority
 
 - [ ] Death animation
-- [ ] Move decks to the side of the board
+- [x] Move decks to the side of the board
 - [ ] Add effects
 - [ ] Minion movement animation
 - [ ] Custom card back
