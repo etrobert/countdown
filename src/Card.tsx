@@ -32,7 +32,7 @@ export default function Card({
         <img
           src={card.art}
           alt={card.name}
-          className="rounded-sm mix-blend-multiply [zoom:0.09]"
+          className="rounded-sm mix-blend-multiply [zoom:0.12]"
         />
         <h2 className="text-center text-lg font-bold">{card.name}</h2>
       </div>
