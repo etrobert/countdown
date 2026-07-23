@@ -38,14 +38,14 @@ export const LANE_CELLS = 7;
 // Movement spread: 1 is slow, 2 is standard, 3 is fast — averaging about 2
 // across the pool.
 export const CARDS = {
-  piou: { name: "Piou", cost: 1, atk: 2, hp: 1, movement: 3, art: piouArt },
-  blob: { name: "Blob", cost: 1, atk: 2, hp: 2, movement: 1, art: blobArt },
-  bush: { name: "Bush", cost: 2, atk: 1, hp: 4, movement: 1, art: bushArt },
+  piou: { name: "Piou", cost: 2, atk: 2, hp: 1, movement: 3, art: piouArt },
+  blob: { name: "Blob", cost: 2, atk: 1, hp: 4, movement: 1, art: blobArt },
+  bush: { name: "Bush", cost: 1, atk: 2, hp: 1, movement: 2, art: bushArt },
   zombie: {
     name: "Zombie",
-    cost: 2,
+    cost: 1,
     atk: 2,
-    hp: 3,
+    hp: 2,
     movement: 1,
     art: zombieArt,
   },
@@ -70,11 +70,11 @@ export const CARDS = {
     name: "Mount Dog",
     cost: 4,
     atk: 4,
-    hp: 3,
+    hp: 2,
     movement: 3,
     art: mountdogArt,
   },
-  lion: { name: "Lion", cost: 4, atk: 5, hp: 3, movement: 3, art: lionArt },
+  lion: { name: "Lion", cost: 5, atk: 5, hp: 3, movement: 3, art: lionArt },
   hydra: { name: "Hydra", cost: 5, atk: 3, hp: 12, movement: 1, art: hydraArt },
 } satisfies Record<string, Card>;
 
