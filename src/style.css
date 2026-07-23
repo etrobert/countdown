@@ -8,6 +8,23 @@
   --color-edge: #8b8397;
   --card-w: 9rem;
   --card-h: 12.5rem;
+  --animate-zzz: zzz 2.4s ease-in-out infinite;
+}
+
+/* A single "z" drifting up and fading — a freshly summoned minion is resting
+   this turn. Three staggered copies (see Minion.tsx) read as a lazy "Zzz". */
+@keyframes zzz {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.9rem) scale(1.15);
+  }
 }
 
 /* Hatched paper texture for the back of a deck card. */
