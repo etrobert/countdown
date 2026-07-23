@@ -86,6 +86,10 @@ export const CARD_IDS = Object.keys(CARDS) as CardId[];
 /** Cards offered at the between-battles draft; pick one or pass. */
 export const DRAFT_CHOICES = 3;
 
+/** Cards the between-battles remove step lets you cut from the run deck; cut up
+ *  to this many, or none. Pairs with the add step — add up to 2, then trim. */
+export const REMOVE_LIMIT = 2;
+
 /** Placeholder: cycles the pool to fill the deck. Real decklists are still open. */
 export const STARTING_DECK: CardId[] = Array.from(
   { length: DECK_SIZE },
