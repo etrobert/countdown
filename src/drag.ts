@@ -24,6 +24,7 @@ export type Drag = {
 export function useDrag(
   state: GameState,
   setState: Dispatch<SetStateAction<GameState>>,
+  playerIndex: number,
 ) {
   const [drag, setDrag] = useState<Drag | null>(null);
 
@@ -61,7 +62,7 @@ export function useDrag(
 
     const onUp = (e: PointerEvent) => {
       const lane = laneAt(e.clientX, e.clientY);
-      if (lane !== null) setState((s) => play(s, dragUid, lane));
+      if (lane !== null) setState((s) => play(s, playerIndex, dragUid, lane));
       setDrag(null);
     };
 
@@ -71,7 +72,7 @@ export function useDrag(
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [dragUid, setState]);
+  }, [dragUid, setState, playerIndex]);
 
   const start = (instance: CardInstance, e: ReactPointerEvent) =>
     setDrag({ instance, x: e.clientX, y: e.clientY, lane: null });

@@ -1,5 +1,6 @@
 import {
   CARDS,
+  DECK_SIZE,
   HAND_SIZE,
   LANES,
   LANE_CELLS,
@@ -20,28 +21,58 @@ export type Minion = CardInstance & {
   hp: number;
 };
 
-export type GameState = {
+/** One player's private cards. The deck is their life total, the hand is what
+ *  they can act on. Every player shares the board, so minions live on
+ *  GameState, not here. */
+export type Player = {
   deck: CardInstance[];
   hand: CardInstance[];
+};
+
+export type GameState = {
+  /** Every player in the battle, in seating order. Two today; the array leaves
+   *  the door open to a three-or-more-way free-for-all later. */
+  players: Player[];
   minions: Minion[];
 };
 
+/** Deals a starting hand and deck, numbering copies from `firstUid` so no two
+ *  players' cards collide — a uid has to be unique across the whole board. */
+function deal(firstUid: number): Player {
+  const cards = STARTING_DECK.map((card, i) => ({ uid: firstUid + i, card }));
+  return { hand: cards.slice(0, HAND_SIZE), deck: cards.slice(HAND_SIZE) };
+}
+
 export function initialState(): GameState {
-  const cards = STARTING_DECK.map((card, uid) => ({ uid, card }));
   return {
-    hand: cards.slice(0, HAND_SIZE),
-    deck: cards.slice(HAND_SIZE),
+    players: [deal(0), deal(DECK_SIZE)],
     minions: [],
   };
 }
 
-/** Moves the top card into hand. Drawing is the countdown — the deck is the
- *  life total, so every draw spends one. A no-op on an empty deck; running out
- *  is a loss, which is not modelled yet. */
-export function draw(state: GameState): GameState {
-  const [top, ...rest] = state.deck;
+/** Swaps one player, leaving the rest of the seating untouched. */
+function withPlayer(
+  state: GameState,
+  playerIndex: number,
+  player: Player,
+): GameState {
+  return {
+    ...state,
+    players: state.players.map((p, i) => (i === playerIndex ? player : p)),
+  };
+}
+
+/** Moves the top card into a player's hand. Drawing is the countdown — the
+ *  deck is the life total, so every draw spends one. A no-op on an empty deck;
+ *  running out is a loss, which is not modelled yet. */
+export function draw(state: GameState, playerIndex: number): GameState {
+  const player = state.players[playerIndex];
+  const [top, ...rest] = player.deck;
   if (!top) return state;
-  return { ...state, deck: rest, hand: [...state.hand, top] };
+  return withPlayer(state, playerIndex, {
+    deck: rest,
+    hand: [...player.hand, top],
+  });
 }
 
 export function minionAt(state: GameState, lane: number, cell: number) {
@@ -74,15 +105,25 @@ export function endTurn(state: GameState): GameState {
   return { ...state, minions };
 }
 
-/** Plays a card from hand into a lane, summoning it at your end of that lane. */
-export function play(state: GameState, uid: number, lane: number): GameState {
-  const instance = state.hand.find((c) => c.uid === uid);
+/** Plays a card from a player's hand into a lane, summoning it at their end of
+ *  that lane. */
+export function play(
+  state: GameState,
+  playerIndex: number,
+  uid: number,
+  lane: number,
+): GameState {
+  const player = state.players[playerIndex];
+  const instance = player.hand.find((c) => c.uid === uid);
   if (!instance || !canPlay(state, lane)) return state;
+  const next = withPlayer(state, playerIndex, {
+    ...player,
+    hand: player.hand.filter((c) => c.uid !== uid),
+  });
   return {
-    ...state,
-    hand: state.hand.filter((c) => c.uid !== uid),
+    ...next,
     minions: [
-      ...state.minions,
+      ...next.minions,
       { ...instance, lane, cell: 0, hp: CARDS[instance.card].hp },
     ],
   };
