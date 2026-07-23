@@ -92,6 +92,7 @@
             packages = [
               pkgs.nodejs
               pkgs.pnpm
+              pkgs.zip
             ];
           };
         }
