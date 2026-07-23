@@ -20,6 +20,7 @@ export default function App() {
 
   const you = state.players[YOU];
   const enemy = state.players[ENEMY];
+  const yourTurn = state.activePlayerIndex === YOU;
 
   return (
     <main
@@ -44,13 +45,19 @@ export default function App() {
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
         Turn {state.turn}
         <span className="block text-sm font-normal">
-          {state.activePlayerIndex === YOU ? "Your turn" : "Enemy turn"}
+          {yourTurn ? "Your turn" : "Enemy turn"}
         </span>
       </div>
       <button
         type="button"
         onClick={() => setState(endTurn)}
-        className="absolute right-10 bottom-12 cursor-pointer rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150 hover:-translate-y-1"
+        disabled={!yourTurn}
+        className={cn(
+          "absolute right-10 bottom-12 rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150",
+          yourTurn
+            ? "cursor-pointer hover:-translate-y-1"
+            : "cursor-not-allowed opacity-40",
+        )}
       >
         End Turn
       </button>
