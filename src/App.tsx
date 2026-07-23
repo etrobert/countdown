@@ -36,14 +36,16 @@ export default function App() {
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
 
-  // End the human's turn, then drive the enemy's: it summons a minion (its turn
-  // already drew for it), and after a pause so the player can watch, ends its
-  // own turn back to you.
+  // End the human's turn, then drive the enemy's one beat at a time so the
+  // player can follow along: passing the turn draws for the enemy, then after a
+  // second it summons a minion, and a second later it ends its own turn back to
+  // you.
   function handleEndTurn() {
-    withViewTransition(() =>
-      setState((state) => summonMinion(endTurn(state), ENEMY)),
-    );
-    setTimeout(() => withViewTransition(() => setState(endTurn)), 2000);
+    withViewTransition(() => setState(endTurn));
+    setTimeout(() => {
+      withViewTransition(() => setState((state) => summonMinion(state, ENEMY)));
+      setTimeout(() => withViewTransition(() => setState(endTurn)), 1000);
+    }, 1000);
   }
 
   return (
