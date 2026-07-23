@@ -25,7 +25,10 @@ export default function App() {
   // End the human's turn, then drive the enemy's: it draws, and after a pause
   // so the player can watch, ends its own turn back to you.
   function handleEndTurn() {
-    setState((s) => draw(endTurn(s), ENEMY));
+    setState((s) => {
+      const enemyTurn = endTurn(s);
+      return draw(enemyTurn, ENEMY);
+    });
     setTimeout(() => setState(endTurn), 2000);
   }
 
