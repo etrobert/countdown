@@ -11,6 +11,27 @@ export default function Minion({ minion }: { minion: MinionData }) {
   const facingLeft = minion.owner !== 0;
   return (
     <div className="relative flex size-full flex-col">
+      {/* Summoned this turn: it sits still and sleeps. A trio of drifting z's
+          signals it can't advance yet — it wakes on its owner's next turn. */}
+      {minion.summoned && (
+        <div
+          className="pointer-events-none absolute -top-1 right-0.5 flex items-start text-edge"
+          aria-label="Resting — summoned this turn"
+        >
+          {[0, 0.8, 1.6].map((delay, i) => (
+            <span
+              key={i}
+              className="animate-zzz font-serif font-bold italic leading-none"
+              style={{
+                animationDelay: `${delay}s`,
+                fontSize: `${0.5 + i * 0.15}rem`,
+              }}
+            >
+              z
+            </span>
+          ))}
+        </div>
+      )}
       <div className="flex min-h-0 flex-1 items-end justify-center">
         {/* One shared zoom on each sketch's own pixels, and NO per-image max
             clamp — that clamp is what would flatten every crop to the cell and

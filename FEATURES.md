@@ -7,6 +7,7 @@
 - [x] Make enemy minions move
 - [ ] Implement minions attack
 - [x] Minions do not move the turn they are summoned
+- [x] Show a sleep (Zzz) indicator on minions summoned this turn
 - [ ] Minion damaging deck animation
 - [ ] Fix layout shift when hand is empty
 
