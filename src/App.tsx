@@ -20,6 +20,17 @@ export default function App() {
 
   const you = state.players[YOU];
   const enemy = state.players[ENEMY];
+  const yourTurn = state.activePlayerIndex === YOU;
+
+  // End the human's turn, then drive the enemy's: it draws, and after a pause
+  // so the player can watch, ends its own turn back to you.
+  function handleEndTurn() {
+    setState((s) => {
+      const enemyTurn = endTurn(s);
+      return draw(enemyTurn, ENEMY);
+    });
+    setTimeout(() => setState(endTurn), 2000);
+  }
 
   return (
     <main
@@ -41,10 +52,19 @@ export default function App() {
         className="bottom-12 left-10"
       />
       <Deck count={enemy.deck.length} className="top-12 right-10" />
+      <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
+        {yourTurn ? "Your turn" : "Enemy turn"}
+      </div>
       <button
         type="button"
-        onClick={() => setState(endTurn)}
-        className="absolute right-10 bottom-12 cursor-pointer rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150 hover:-translate-y-1"
+        onClick={handleEndTurn}
+        disabled={!yourTurn}
+        className={cn(
+          "absolute right-10 bottom-12 rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150",
+          yourTurn
+            ? "cursor-pointer hover:-translate-y-1"
+            : "cursor-not-allowed opacity-40",
+        )}
       >
         End Turn
       </button>
