@@ -1,10 +1,32 @@
+import type { CSSProperties } from "react";
+import { CLASH_LUNGE_PX, CLASH_MS, CONTACT_MS, RECOIL_PX } from "./anim.ts";
 import Card from "./Card.tsx";
 import { CARDS } from "./balance.ts";
 import { HeartIcon, SwordIcon } from "./icons.tsx";
 import { cn } from "./lib/utils.ts";
 import type { Minion as MinionData } from "./state.ts";
 
-export default function Minion({ minion }: { minion: MinionData }) {
+declare module "react" {
+  interface CSSProperties {
+    /** Wind-up / strike offsets fed to the clash keyframe (see style.css). */
+    "--recoil-x"?: string;
+    "--lunge-x"?: string;
+  }
+}
+
+/** The blow a minion is playing this beat, or undefined when it just stands.
+ *  A clash trades with an adjacent enemy — `dir` is its facing (+1 / -1). The
+ *  same bump plays whether it lives or dies; a dead one is just gone once the
+ *  outcome commits. */
+export type MinionAttack = { kind: "clash"; dir: number };
+
+export default function Minion({
+  minion,
+  attack,
+}: {
+  minion: MinionData;
+  attack?: MinionAttack;
+}) {
   const card = CARDS[minion.card];
   // Once a minion has taken damage its current HP drops below the card's
   // printed HP — flag it so the health readout can warn in red.
@@ -13,13 +35,23 @@ export default function Minion({ minion }: { minion: MinionData }) {
   // advance. Anyone across the board walks the other way, so mirror their art
   // to face left. Only the art flips — the ATK/HP footer stays readable.
   const facingLeft = minion.owner !== 0;
+
+  // The uid-keyed transition name (so plays/moves/deaths morph) rides on the
+  // root; when this minion is clashing, the same element also runs the bump —
+  // its facing sets the wind-up/strike offsets the keyframe reads.
+  const style: CSSProperties = {
+    viewTransitionName: `card-${minion.uid}`,
+    ...(attack && {
+      animationName: "clash-strike",
+      animationDuration: `${CLASH_MS}ms`,
+      animationFillMode: "both",
+      "--recoil-x": `${-attack.dir * RECOIL_PX}px`,
+      "--lunge-x": `${attack.dir * CLASH_LUNGE_PX}px`,
+    }),
+  };
+
   return (
-    // Same uid-keyed transition name as the card in hand, so playing it morphs
-    // the card onto the board, and later moves/deaths animate too.
-    <div
-      className="group relative flex size-full flex-col"
-      style={{ viewTransitionName: `card-${minion.uid}` }}
-    >
+    <div className="group relative flex size-full flex-col" style={style}>
       {/* Hover to inspect: the minion's full card pops to the right, centered
           on the cell so the taller card straddles the minion's row. Kept out of
           hit-testing and the a11y tree — it only enlarges what the footer and
@@ -52,7 +84,7 @@ export default function Minion({ minion }: { minion: MinionData }) {
           ))}
         </div>
       )}
-      <div className="flex min-h-0 flex-1 items-end justify-center">
+      <div className="relative flex min-h-0 flex-1 items-end justify-center">
         {/* One shared zoom on each sketch's own pixels, and NO per-image max
             clamp — that clamp is what would flatten every crop to the cell and
             kill the relative scale. Kept off, the crops keep their drawn sizes:
@@ -67,6 +99,24 @@ export default function Minion({ minion }: { minion: MinionData }) {
             facingLeft && "-scale-x-100",
           )}
         />
+        {/* Impact cue: at the moment of contact the struck minion's own
+            silhouette lights up white — a copy of the sketch whitened by filter
+            (the art's alpha is kept, so it's the body's shape, not a tile-sized
+            square), laid exactly over it. */}
+        {attack && (
+          <img
+            src={card.art}
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 [zoom:0.08]",
+              facingLeft && "-scale-x-100",
+            )}
+            style={{
+              filter: "brightness(0) invert(1)",
+              animation: `hit-flash 180ms ${CONTACT_MS}ms both`,
+            }}
+          />
+        )}
       </div>
       <footer className="relative flex justify-between text-xs font-bold">
         <span
@@ -77,10 +127,7 @@ export default function Minion({ minion }: { minion: MinionData }) {
           {card.atk}
         </span>
         <span
-          className={cn(
-            "flex items-center gap-0.5",
-            damaged && "text-red-600",
-          )}
+          className={cn("flex items-center gap-0.5", damaged && "text-red-600")}
           aria-label={`Health ${minion.hp}`}
         >
           <HeartIcon className="size-3" />

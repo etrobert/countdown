@@ -36,6 +36,42 @@
   }
 }
 
+/* Attack motion. A minion pulls back a touch (wind-up), strikes toward the
+   blow, then settles home — the same bump whether it lives or dies (a dead one
+   is just removed when the outcome commits, right as it lands home). The strike
+   offsets come in per-minion as --recoil-x and --lunge-x so one keyframe serves
+   either facing; the per-keyframe timing functions give the wind-up its ease-out
+   drift and the strike its ease-in snap. Durations are set inline from anim.ts. */
+@keyframes clash-strike {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+  32% {
+    translate: var(--recoil-x) 0;
+    animation-timing-function: ease-in;
+  }
+  55% {
+    translate: var(--lunge-x) 0;
+    animation-timing-function: ease-out;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+/* Impact cue on a struck minion: its silhouette flashes white, delayed to the
+   moment of contact (the white sprite copy that fades in lives in Minion.tsx). */
+@keyframes hit-flash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.9;
+  }
+}
+
 /* Hatched paper texture for the back of a deck card. */
 @utility card-back {
   background: repeating-linear-gradient(
