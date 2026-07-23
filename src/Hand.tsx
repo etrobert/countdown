@@ -26,35 +26,34 @@ function fan(index: number, count: number): CSSProperties {
   };
 }
 
-const LIFTED = "z-10 -translate-y-10 rotate-0 scale-115";
 const FANNED = "z-[var(--z)] translate-y-[var(--dy)] rotate-[var(--rot)]";
 
 export default function Hand({
   cards,
-  selected,
-  onSelect,
+  dragging,
+  onDragStart,
 }: {
   cards: CardInstance[];
-  selected: number | null;
-  onSelect: (uid: number | null) => void;
+  /** uid of the card being dragged, so its slot in the fan reads as empty. */
+  dragging: number | null;
+  onDragStart: (instance: CardInstance, e: React.PointerEvent) => void;
 }) {
   return (
     // Rotation, translate and the hover scale do not grow the layout box, so
     // the hand needs padding to overhang into or it clips the viewport.
-    <div className="flex items-end justify-center px-8 pt-16 pb-12">
+    <div className="flex touch-none items-end justify-center px-8 pt-16 pb-12 select-none">
       {cards.map((instance, i) => (
         <button
           key={instance.uid}
           type="button"
-          aria-pressed={selected === instance.uid}
-          onClick={() =>
-            onSelect(selected === instance.uid ? null : instance.uid)
-          }
-          // Selected and fanned set the same properties, so they are swapped
-          // rather than combined — appending would leave the winner up to
-          // Tailwind's own rule order rather than this list.
-          className={`relative cursor-pointer transition-[rotate,translate,scale] duration-150 ease-in-out not-first:-ml-16 hover:z-10 hover:-translate-y-10 hover:rotate-0 hover:scale-115 ${
-            selected === instance.uid ? LIFTED : FANNED
+          onPointerDown={(e) => onDragStart(instance, e)}
+          // The card face holds an image; killing native drag stops its ghost
+          // from fighting the pointer drag.
+          onDragStart={(e) => e.preventDefault()}
+          className={`relative transition-[rotate,translate,scale] duration-150 ease-in-out not-first:-ml-16 hover:z-10 hover:-translate-y-10 hover:rotate-0 hover:scale-115 ${FANNED} ${
+            dragging === instance.uid
+              ? "cursor-grabbing opacity-0"
+              : "cursor-grab"
           }`}
           style={fan(i, cards.length)}
         >

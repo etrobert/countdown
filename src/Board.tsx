@@ -4,12 +4,14 @@ import type { Minion } from "./state.ts";
 
 export default function Board({
   minions,
-  selecting,
-  onPlayLane,
+  dragging,
+  dragLane,
 }: {
   minions: Minion[];
-  selecting: boolean;
-  onPlayLane: (lane: number) => void;
+  /** True while a card is being dragged, so valid lanes light up. */
+  dragging: boolean;
+  /** The playable lane under the pointer, highlighted as the drop target. */
+  dragLane: number | null;
 }) {
   const at = (lane: number, cell: number) =>
     minions.find((m) => m.lane === lane && m.cell === cell);
@@ -20,18 +22,17 @@ export default function Board({
     <div className="flex flex-col gap-3 self-center">
       {Array.from({ length: LANES }, (_, lane) => {
         // A card arrives at cell 0, so a full entry cell blocks the whole lane.
-        const playable = selecting && !at(lane, 0);
+        const playable = dragging && !at(lane, 0);
+        const targeted = dragLane === lane;
         return (
-          <button
+          // `data-lane` lets the drag resolve which lane the pointer is over.
+          <div
             key={lane}
-            type="button"
-            disabled={!playable}
-            onClick={() => onPlayLane(lane)}
-            aria-label={`Play into lane ${lane + 1}`}
+            data-lane={lane}
             // Cell 0 is leftmost — a minion you summon enters there and walks
             // rightward toward the far end.
             className={`flex gap-2 rounded-lg p-1 transition-colors ${
-              playable ? "cursor-pointer bg-ink/8" : "cursor-default"
+              targeted ? "bg-ink/15" : playable ? "bg-ink/8" : ""
             }`}
           >
             {Array.from({ length: LANE_CELLS }, (_, cell) => {
@@ -47,7 +48,7 @@ export default function Board({
                 </div>
               );
             })}
-          </button>
+          </div>
         );
       })}
     </div>
