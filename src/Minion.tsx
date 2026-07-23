@@ -5,6 +5,9 @@ import type { Minion as MinionData } from "./state.ts";
 
 export default function Minion({ minion }: { minion: MinionData }) {
   const card = CARDS[minion.card];
+  // Once a minion has taken damage its current HP drops below the card's
+  // printed HP — flag it so the health readout can warn in red.
+  const damaged = minion.hp < card.hp;
   // The sketches are drawn facing right, which is the way your minions (seat 0)
   // advance. Anyone across the board walks the other way, so mirror their art
   // to face left. Only the art flips — the ATK/HP footer stays readable.
@@ -57,7 +60,10 @@ export default function Minion({ minion }: { minion: MinionData }) {
           {card.atk}
         </span>
         <span
-          className="flex items-center gap-0.5"
+          className={cn(
+            "flex items-center gap-0.5",
+            damaged && "text-red-600",
+          )}
           aria-label={`Health ${minion.hp}`}
         >
           <HeartIcon className="size-3" />
