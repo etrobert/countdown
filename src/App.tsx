@@ -64,9 +64,9 @@ export default function App() {
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
   const busy = attacks !== null;
-  // Once a seat decks out the battle is over: freeze every action and let the
-  // overlay take the screen. resolveTurn already no-ops past this point; gating
-  // here also stops card play and skips the enemy's remaining beats.
+  // Once a seat decks out the battle is over. The state layer freezes itself —
+  // canPlay and resolveTurn both no-op past this point — so `over` only feeds
+  // what the player sees: the scrim and the End Turn button's disabled look.
   const over = state.winner !== undefined;
   const youWon = state.winner === YOU;
 
@@ -152,7 +152,7 @@ export default function App() {
       <Hand
         cards={you.hand}
         dragging={dragUid}
-        onDragStart={busy || !yourTurn || over ? undefined : start}
+        onDragStart={busy || !yourTurn ? undefined : start}
       />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
         {yourTurn ? "Your turn" : "Enemy turn"}

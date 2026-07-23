@@ -99,8 +99,9 @@ function withPlayer(
 }
 
 /** Moves the top card into a player's hand. Drawing is the countdown — the
- *  deck is the life total, so every draw spends one. A no-op on an empty deck;
- *  running out is a loss, which is not modelled yet. */
+ *  deck is the life total, so every draw spends one. Deck-out is detected in
+ *  `resolveTurn` before the turn's draw ever happens, so the empty-deck no-op
+ *  here is a defensive guard, not the loss rule. */
 function drawCard(player: Player): Player {
   const [top, ...rest] = player.deck;
   if (!top) return player;
@@ -125,16 +126,18 @@ export function step(playerIndex: number): number {
   return playerIndex === 0 ? 1 : -1;
 }
 
-/** A card arrives on its owner's entry cell, so a lane is only playable for
- *  that player on their own turn and while that cell is free. This is about
- *  the turn and the board, not the card — whether the player can afford a
- *  given card is `canAfford`. */
+/** A card arrives on its owner's entry cell, so a lane is only playable while
+ *  the battle is live, for that player on their own turn, and while that cell
+ *  is free — a drag started just before the final beat cannot land a card in a
+ *  finished game. This is about the battle, the turn and the board, not the
+ *  card — whether the player can afford a given card is `canAfford`. */
 export function canPlay(
   state: GameState,
   lane: number,
   playerIndex: number,
 ): boolean {
   return (
+    state.winner === undefined &&
     state.activePlayerIndex === playerIndex &&
     !minionAt(state, lane, entryCell(playerIndex))
   );
