@@ -84,8 +84,8 @@
   }
 }
 
-/* Impact cue on a struck minion, both delayed to the moment of contact: a brief
-   red wash over the sprite and a damage number floating up and away. */
+/* Impact cue on a struck minion: a brief red wash over the sprite, delayed to
+   the moment of contact. */
 @keyframes hit-flash {
   0%,
   100% {
@@ -93,20 +93,6 @@
   }
   35% {
     opacity: 0.65;
-  }
-}
-
-@keyframes hit-number {
-  0% {
-    opacity: 0;
-    transform: translateY(0);
-  }
-  25% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-0.9rem);
   }
 }
 

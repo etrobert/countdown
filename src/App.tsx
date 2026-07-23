@@ -58,8 +58,8 @@ export default function App() {
   const busy = combat !== null;
 
   // Turn each landed blow into the animation its minion(s) play. A clash moves
-  // both fighters (each toward the other, each showing the damage it took); a
-  // mill moves only the raider, aimed at the deck it struck.
+  // both fighters, each toward the other; a mill moves only the raider, aimed
+  // at the deck it struck.
   function attacksFor(events: CombatEvent[], resolved: GameState) {
     const alive = new Set(resolved.minions.map((m) => m.uid));
     const attacks = new Map<number, MinionAttack>();
@@ -69,13 +69,11 @@ export default function App() {
         attacks.set(a.uid, {
           kind: "clash",
           dir: step(a.owner),
-          damage: CARDS[b.card].atk,
           dies: !alive.has(a.uid),
         });
         attacks.set(b.uid, {
           kind: "clash",
           dir: step(b.owner),
-          damage: CARDS[a.card].atk,
           dies: !alive.has(b.uid),
         });
       } else {

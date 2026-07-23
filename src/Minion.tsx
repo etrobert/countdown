@@ -16,12 +16,12 @@ declare module "react" {
 }
 
 /** The blow a minion is playing this beat, or undefined when it just stands.
- *  `clash`: trades with an adjacent enemy — `dir` is its facing (+1 / -1),
- *  `damage` is what it took (the floating number), `dies` picks the settle-home
- *  or hold-and-vanish keyframe. `mill`: charges the enemy deck; `deckRef` points
- *  at that deck so the dash can be aimed along the live on-screen diagonal. */
+ *  `clash`: trades with an adjacent enemy — `dir` is its facing (+1 / -1) and
+ *  `dies` picks the settle-home or hold-and-vanish keyframe. `mill`: charges the
+ *  enemy deck; `deckRef` points at that deck so the dash can be aimed along the
+ *  live on-screen diagonal. */
 export type MinionAttack =
-  | { kind: "clash"; dir: number; damage: number; dies: boolean }
+  | { kind: "clash"; dir: number; dies: boolean }
   | { kind: "mill"; deckRef: RefObject<HTMLElement | null> };
 
 export default function Minion({
@@ -101,24 +101,15 @@ export default function Minion({
           ))}
         </div>
       )}
-      {/* Impact cue on a struck minion: a red wash over the body and the damage
-          it took floating up, both held off until the strike lands (see the
-          keyframe delays). Only a clash lands a blow on a minion. */}
+      {/* Impact cue on a struck minion: a red wash over the body, held off
+          until the strike lands (see the keyframe delay). Only a clash lands a
+          blow on a minion. */}
       {attack?.kind === "clash" && (
-        <>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-md bg-red-500"
-            style={{ animation: `hit-flash 220ms ${CONTACT_MS}ms both` }}
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 -top-3 text-center text-sm font-bold text-red-600"
-            style={{ animation: `hit-number 600ms ${CONTACT_MS}ms both` }}
-          >
-            -{attack.damage}
-          </span>
-        </>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-md bg-red-500"
+          style={{ animation: `hit-flash 220ms ${CONTACT_MS}ms both` }}
+        />
       )}
       <div className="flex min-h-0 flex-1 items-end justify-center">
         {/* One shared zoom on each sketch's own pixels, and NO per-image max

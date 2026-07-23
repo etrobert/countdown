@@ -26,8 +26,8 @@ export const MILL_MS = 430;
  *  resolved outcome (damage, deaths, mills) commits. The longest animation. */
 export const COMBAT_MS = Math.max(CLASH_MS, MILL_MS);
 
-/** When the strike lands — the impact cue (red flash, floating damage) fires
- *  here. 55% of a clash, matching the strike keyframe in `style.css`. */
+/** When the strike lands — the impact cue (a red flash) fires here. 55% of a
+ *  clash, matching the strike keyframe in `style.css`. */
 export const CONTACT_MS = Math.round(CLASH_MS * 0.55);
 
 /** Beat between the enemy summoning and its minions acting, so the player can
