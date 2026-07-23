@@ -6,7 +6,7 @@ import Hand from "./Hand.tsx";
 import { CARDS } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
-import { draw, endTurn, initialState } from "./state.ts";
+import { draw, endTurn, initialState, summonMinion } from "./state.ts";
 
 // Seats. The local player's hand is face-up and draggable; the enemy's is a row
 // of card backs. Only two seats today — the board is two-sided — but GameState
@@ -22,12 +22,14 @@ export default function App() {
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
 
-  // End the human's turn, then drive the enemy's: it draws, and after a pause
-  // so the player can watch, ends its own turn back to you.
+  // End the human's turn, then drive the enemy's: it draws and summons a
+  // minion, and after a pause so the player can watch, ends its own turn back
+  // to you.
   function handleEndTurn() {
-    setState((s) => {
-      const enemyTurn = endTurn(s);
-      return draw(enemyTurn, ENEMY);
+    setState((state) => {
+      state = endTurn(state);
+      state = draw(state, ENEMY);
+      return summonMinion(state, ENEMY);
     });
     setTimeout(() => setState(endTurn), 2000);
   }
