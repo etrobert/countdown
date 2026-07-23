@@ -116,15 +116,22 @@ export default function App() {
     const afterEnd = await playTurn(state);
     if (afterEnd.winner !== undefined) return;
     await sleep(1000);
-    const choice = chooseSummon(afterEnd, ENEMY);
-    const afterSummon = choice
-      ? play(afterEnd, ENEMY, choice.uid, choice.lane)
-      : afterEnd;
-    if (choice) {
-      withViewTransition(() => setState(afterSummon));
+    // Summon until nothing more can be played: chooseSummon returns null once
+    // mana, hand, or open lanes run out, so the enemy spends its whole turn
+    // rather than a single card. Each summon is its own beat — animate, sound,
+    // pause — so the player can follow the board filling up.
+    let afterSummon = afterEnd;
+    for (
+      let choice = chooseSummon(afterSummon, ENEMY);
+      choice;
+      choice = chooseSummon(afterSummon, ENEMY)
+    ) {
+      afterSummon = play(afterSummon, ENEMY, choice.uid, choice.lane);
+      const summoned = afterSummon;
+      withViewTransition(() => setState(summoned));
       playSummonSound(choice.card);
+      await sleep(1000);
     }
-    await sleep(1000);
     await playTurn(afterSummon);
   }
 
