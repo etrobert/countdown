@@ -27,6 +27,89 @@
   }
 }
 
+/* Attack motion. A minion pulls back a touch (wind-up), strikes toward the
+   blow, then either settles home (survivor) or holds forward and is removed
+   (a kill, or a spent raider). The strike offsets come in per-minion as
+   --recoil-x/y and --lunge-x/y so one keyframe serves every direction; the
+   per-keyframe timing functions give the wind-up its ease-out drift and the
+   strike its ease-in snap. Durations are set inline from anim.ts. */
+@keyframes clash-strike {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+  32% {
+    translate: var(--recoil-x) 0;
+    animation-timing-function: ease-in;
+  }
+  55% {
+    translate: var(--lunge-x) 0;
+    animation-timing-function: ease-out;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+/* A clash the minion does not survive: same wind-up and strike, but it holds at
+   the point of impact instead of settling, then unmounts when combat commits. */
+@keyframes clash-kill {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+  32% {
+    translate: var(--recoil-x) 0;
+    animation-timing-function: ease-in;
+  }
+  55%,
+  100% {
+    translate: var(--lunge-x) 0;
+  }
+}
+
+/* The raid: a short wind-up, then a long charge across the board to the enemy
+   deck along the diagonal measured in Minion.tsx. No settle — it is removed. */
+@keyframes mill-dash {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+  30% {
+    translate: var(--recoil-x) var(--recoil-y);
+    animation-timing-function: ease-in;
+  }
+  100% {
+    translate: var(--lunge-x) var(--lunge-y);
+  }
+}
+
+/* Impact cue on a struck minion, both delayed to the moment of contact: a brief
+   red wash over the sprite and a damage number floating up and away. */
+@keyframes hit-flash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.65;
+  }
+}
+
+@keyframes hit-number {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.9rem);
+  }
+}
+
 /* Hatched paper texture for the back of a deck card. */
 @utility card-back {
   background: repeating-linear-gradient(
