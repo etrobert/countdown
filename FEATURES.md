@@ -8,6 +8,7 @@
 - [ ] Implement minions attack
 - [ ] Minions do not move the turn they are summoned
 - [ ] Minion damaging deck animation
+- [ ] Fix layout shift when hand is empty
 
 ## Medium Priority
 
