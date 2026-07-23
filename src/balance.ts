@@ -8,8 +8,7 @@ export type Card = {
   cost: number;
   atk: number;
   hp: number;
-  /** Optional until every card has a sketch. */
-  art?: string;
+  art: string;
 };
 
 export const HAND_SIZE = 5;
@@ -22,11 +21,6 @@ export const LANES = 3;
 export const LANE_CELLS = 4;
 
 export const CARDS = {
-  runner: { name: "Runner", cost: 1, atk: 1, hp: 1 },
-  sentry: { name: "Sentry", cost: 2, atk: 1, hp: 4 },
-  lash: { name: "Lash", cost: 3, atk: 3, hp: 2 },
-  zealot: { name: "Zealot", cost: 3, atk: 5, hp: 3 },
-  colossus: { name: "Colossus", cost: 5, atk: 4, hp: 6 },
   goblin: { name: "Goblin", cost: 1, atk: 2, hp: 1, art: goblinArt },
   swordman: { name: "Swordman", cost: 3, atk: 3, hp: 3, art: swordmanArt },
   hydra: { name: "Hydra", cost: 5, atk: 5, hp: 6, art: hydraArt },

@@ -1,29 +1,21 @@
-import { CARDS, type Card } from "./balance.ts";
+import { CARDS } from "./balance.ts";
 import { HeartIcon, SwordIcon } from "./icons.tsx";
 import type { Minion as MinionData } from "./state.ts";
 
 export default function Minion({ minion }: { minion: MinionData }) {
-  // Annotated because `satisfies` gives CARDS the literal entry types, and
-  // entries without art have no `art` property at all to narrow against.
-  const card: Card = CARDS[minion.card];
+  const card = CARDS[minion.card];
   return (
     <div className="relative flex size-full flex-col">
       <div className="flex min-h-0 flex-1 items-end justify-center">
-        {card.art ? (
-          // Sized to a fraction of the sketch's own pixels and stood on the
-          // tile floor, so the compressed relative scale reads on the board —
-          // a goblin barely fills its cell, a hydra towers. It stands in for
-          // the name, carrying the label; multiply drops the paper out.
-          <img
-            src={card.art}
-            alt={card.name}
-            className="max-h-full max-w-full mix-blend-multiply [zoom:0.24]"
-          />
-        ) : (
-          <span className="truncate text-center text-xs font-bold">
-            {card.name}
-          </span>
-        )}
+        {/* Sized to a fraction of the sketch's own pixels and stood on the
+            tile floor, so the compressed relative scale reads on the board —
+            a goblin barely fills its cell, a hydra towers. It stands in for
+            the name, carrying the label; multiply drops the paper out. */}
+        <img
+          src={card.art}
+          alt={card.name}
+          className="max-h-full max-w-full mix-blend-multiply [zoom:0.24]"
+        />
       </div>
       <footer className="relative flex justify-between text-xs font-bold">
         <span
