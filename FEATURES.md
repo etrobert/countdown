@@ -3,7 +3,7 @@
 ## High Priority
 
 - [x] Make enemy summon minions
-- [ ] Flip enemy minions
+- [x] Flip enemy minions
 - [ ] Make enemy minions move
 - [ ] Implement minions attack
 - [ ] Minions do not move the turn they are summoned
