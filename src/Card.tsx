@@ -24,15 +24,16 @@ export default function Card({
         {card.cost}
       </span>
       <div className="flex min-h-0 flex-col items-center justify-end gap-1">
-        {/* One shared zoom on each sketch's own pixels, with NO per-image max
-            clamp — the clamp would flatten every crop to the frame and kill the
-            relative scale (saper smaller, hydra huge). Bottom-aligned by the
-            column's justify-end for a common ground line; multiply drops the
-            sketch's paper out against the card face. */}
+        {/* Fit each sketch to the shared art box (object-contain) so every
+            creature reads at a comparable size regardless of its source
+            canvas — a single global zoom applied to raw pixels made tall
+            creatures dwarf short ones. object-bottom keeps a common ground
+            line; multiply drops the sketch's paper out against the card
+            face. */}
         <img
           src={card.art}
           alt={card.name}
-          className="rounded-sm mix-blend-multiply [zoom:0.12]"
+          className="min-h-0 w-full flex-1 rounded-sm object-contain object-bottom mix-blend-multiply"
         />
         <h2 className="text-center text-lg font-bold">{card.name}</h2>
       </div>
