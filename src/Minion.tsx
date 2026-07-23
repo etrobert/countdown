@@ -108,7 +108,7 @@ export default function Minion({
           src={card.art}
           alt={card.name}
           className={cn(
-            "mix-blend-multiply [zoom:0.11]",
+            "mix-blend-multiply [zoom:0.16]",
             facingLeft && "-scale-x-100",
           )}
           style={
