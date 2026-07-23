@@ -2,7 +2,7 @@
 
 ## High Priority
 
-- [ ] Make enemy summon minions
+- [x] Make enemy summon minions
 - [ ] Make enemy minions move
 - [ ] Implement minions attack
 - [ ] Minions do not move the turn they are summoned
