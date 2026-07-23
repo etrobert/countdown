@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { CLASH_LUNGE_PX, CLASH_MS, CONTACT_MS, RECOIL_PX } from "./anim.ts";
 import Card from "./Card.tsx";
 import { CARDS } from "./balance.ts";
 import { HeartIcon, SwordIcon } from "./icons.tsx";
@@ -8,17 +7,23 @@ import type { Minion as MinionData } from "./state.ts";
 
 declare module "react" {
   interface CSSProperties {
-    /** Wind-up / strike offsets fed to the clash keyframe (see style.css). */
-    "--recoil-x"?: string;
-    "--lunge-x"?: string;
+    /** Facing (+1 / -1) fed to the attack keyframes (see style.css). */
+    "--dir"?: number;
   }
 }
 
-/** The blow a minion is playing this beat, or undefined when it just stands.
- *  A clash trades with an adjacent enemy — `dir` is its facing (+1 / -1). The
- *  same bump plays whether it lives or dies; a dead one is just gone once the
- *  outcome commits. */
-export type MinionAttack = { kind: "clash"; dir: number };
+/** Full attack animation: ~130ms wind-up, ~90ms strike, ~180ms settle. The
+ *  keyframes in `style.css` hold the segment ratios and distances; this sets
+ *  the wall-clock. Also how long the board is held before the outcome commits
+ *  (see App), so nothing is cut off mid-blow. This is motion feel, not game
+ *  balance, so it lives here rather than in `balance.ts`. */
+export const CLASH_MS = 400;
+
+/** The blow a minion is playing this beat — its facing (+1 / -1), toward the
+ *  enemy it clashes with or the deck it raids — or undefined when it just
+ *  stands. The same bump plays whether the minion survives the beat or not; a
+ *  dead clasher or a spent raider is just gone once the outcome commits. */
+export type MinionAttack = number;
 
 export default function Minion({
   minion,
@@ -37,16 +42,15 @@ export default function Minion({
   const facingLeft = minion.owner !== 0;
 
   // The uid-keyed transition name (so plays/moves/deaths morph) rides on the
-  // root; when this minion is clashing, the same element also runs the bump —
-  // its facing sets the wind-up/strike offsets the keyframe reads.
+  // root; when this minion is attacking, the same element also runs the bump —
+  // its facing sets the direction the keyframe strikes toward.
   const style: CSSProperties = {
     viewTransitionName: `card-${minion.uid}`,
-    ...(attack && {
+    ...(attack !== undefined && {
       animationName: "clash-strike",
       animationDuration: `${CLASH_MS}ms`,
       animationFillMode: "both",
-      "--recoil-x": `${-attack.dir * RECOIL_PX}px`,
-      "--lunge-x": `${attack.dir * CLASH_LUNGE_PX}px`,
+      "--dir": attack,
     }),
   };
 
@@ -84,13 +88,15 @@ export default function Minion({
           ))}
         </div>
       )}
-      <div className="relative flex min-h-0 flex-1 items-end justify-center">
+      <div className="flex min-h-0 flex-1 items-end justify-center">
         {/* One shared zoom on each sketch's own pixels, and NO per-image max
             clamp — that clamp is what would flatten every crop to the cell and
             kill the relative scale. Kept off, the crops keep their drawn sizes:
             saper stays smaller, the hydra towers past its cell. Stood on the
             tile floor (items-end) for a common ground line; multiply drops the
-            paper out. */}
+            paper out. During an attack the sketch also runs hit-flash — a
+            filter whitening it at the moment of contact, the art's own alpha
+            keeping it the body's shape. */}
         <img
           src={card.art}
           alt={card.name}
@@ -98,25 +104,12 @@ export default function Minion({
             "mix-blend-multiply [zoom:0.08]",
             facingLeft && "-scale-x-100",
           )}
+          style={
+            attack !== undefined
+              ? { animation: `hit-flash ${CLASH_MS}ms both` }
+              : undefined
+          }
         />
-        {/* Impact cue: at the moment of contact the struck minion's own
-            silhouette lights up white — a copy of the sketch whitened by filter
-            (the art's alpha is kept, so it's the body's shape, not a tile-sized
-            square), laid exactly over it. */}
-        {attack && (
-          <img
-            src={card.art}
-            aria-hidden
-            className={cn(
-              "pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 [zoom:0.08]",
-              facingLeft && "-scale-x-100",
-            )}
-            style={{
-              filter: "brightness(0) invert(1)",
-              animation: `hit-flash 180ms ${CONTACT_MS}ms both`,
-            }}
-          />
-        )}
       </div>
       <footer className="relative flex justify-between text-xs font-bold">
         <span

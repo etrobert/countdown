@@ -4,9 +4,8 @@ import Board from "./Board.tsx";
 import Card from "./Card.tsx";
 import Deck from "./Deck.tsx";
 import Hand from "./Hand.tsx";
-import type { MinionAttack } from "./Minion.tsx";
+import { CLASH_MS, type MinionAttack } from "./Minion.tsx";
 import Mana from "./Mana.tsx";
-import { COMBAT_MS } from "./anim.ts";
 import { CARDS } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
@@ -17,8 +16,8 @@ import {
   play,
   resolveTurn,
   step,
-  type CombatEvent,
   type GameState,
+  type Minion,
 } from "./state.ts";
 
 // Seats. The local player's hand is face-up and draggable; the enemy's is a row
@@ -43,17 +42,13 @@ function withViewTransition(update: () => void) {
  *  plain `await` instead of nested timeout callbacks. */
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Turn each landed clash into the bump its two fighters play, each toward the
- *  other (facing sets the direction). Mills still resolve — their lunge is a
- *  separate feature — so they add no animation here. */
-function attacksFor(events: CombatEvent[]) {
-  const attacks = new Map<number, MinionAttack>();
-  for (const event of events) {
-    if (event.kind !== "clash") continue;
-    attacks.set(event.a.uid, { kind: "clash", dir: step(event.a.owner) });
-    attacks.set(event.b.uid, { kind: "clash", dir: step(event.b.owner) });
-  }
-  return attacks;
+/** Turn each fighter into the bump it plays: everyone strikes the way it
+ *  faces — clashers into each other, a milling raider into the deck at the
+ *  enemy face. */
+function attacksFor(fighters: Minion[]) {
+  return new Map<number, MinionAttack>(
+    fighters.map((m) => [m.uid, step(m.owner)]),
+  );
 }
 
 export default function App() {
@@ -71,16 +66,16 @@ export default function App() {
   const busy = attacks !== null;
 
   // Resolve one player's turn from the given state and return the outcome. If
-  // clashes land, hold the board and play the bumps, then commit the outcome
+  // blows land, hold the board and play the bumps, then commit the outcome
   // inside a View Transition so movement and deaths morph; if none land, just
   // commit. The board doesn't change until the commit, so the held frame is
   // simply the current one with the bumps layered.
   async function playTurn(current: GameState): Promise<GameState> {
-    const { state: resolved, events } = resolveTurn(current);
-    const next = attacksFor(events);
+    const { state: resolved, fighters } = resolveTurn(current);
+    const next = attacksFor(fighters);
     if (next.size > 0) {
       setAttacks(next);
-      await sleep(COMBAT_MS);
+      await sleep(CLASH_MS);
     }
     withViewTransition(() => {
       setAttacks(null);

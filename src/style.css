@@ -37,22 +37,26 @@
 }
 
 /* Attack motion. A minion pulls back a touch (wind-up), strikes toward the
-   blow, then settles home — the same bump whether it lives or dies (a dead one
-   is just removed when the outcome commits, right as it lands home). The strike
-   offsets come in per-minion as --recoil-x and --lunge-x so one keyframe serves
-   either facing; the per-keyframe timing functions give the wind-up its ease-out
-   drift and the strike its ease-in snap. Durations are set inline from anim.ts. */
+   blow, then settles home — the same bump for a clash or a mill, whether the
+   minion survives or not (a dead clasher or spent raider is just removed when
+   the outcome commits, right as it lands home). Facing comes in per-minion as
+   a unitless --dir (+1 / -1) so one keyframe serves either side; the
+   per-keyframe timing functions give the wind-up its ease-out drift and the
+   strike its ease-in snap. Duration is set inline from Minion.tsx. */
 @keyframes clash-strike {
   0% {
     translate: 0 0;
     animation-timing-function: ease-out;
   }
   32% {
-    translate: var(--recoil-x) 0;
+    translate: calc(var(--dir) * -10px) 0;
     animation-timing-function: ease-in;
   }
   55% {
-    translate: var(--lunge-x) 0;
+    /* 40px reaches a touch past the cell seam so contact reads as contact
+       despite the whitespace baked into each sketch — the one dial to tune
+       contact depth by eye. */
+    translate: calc(var(--dir) * 40px) 0;
     animation-timing-function: ease-out;
   }
   100% {
@@ -60,15 +64,21 @@
   }
 }
 
-/* Impact cue on a struck minion: its silhouette flashes white, delayed to the
-   moment of contact (the white sprite copy that fades in lives in Minion.tsx). */
+/* Impact cue: an attacking minion's sketch flashes white right as the 55%
+   strike above lands, whitened by filter on the art itself (see Minion.tsx).
+   Runs for the same duration as clash-strike, so contact needs no inline
+   delay — it's these percentages. The implicit 0%/100% frames are the img's
+   own filter: none, which interpolates as the identity list; the 50% frame
+   holds the flash off through the wind-up. The peak also lifts the img out of
+   its multiply blend — white multiplied into the parchment would vanish. */
 @keyframes hit-flash {
-  0%,
-  100% {
-    opacity: 0;
+  50% {
+    filter: none;
   }
-  35% {
-    opacity: 0.9;
+  55%,
+  63% {
+    filter: brightness(0) invert(1);
+    mix-blend-mode: normal;
   }
 }
 
