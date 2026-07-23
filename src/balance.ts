@@ -39,7 +39,7 @@ export const LANE_CELLS = 7;
 // across the pool.
 export const CARDS = {
   piou: { name: "Piou", cost: 1, atk: 2, hp: 1, movement: 3, art: piouArt },
-  blob: { name: "Blob", cost: 1, atk: 1, hp: 2, movement: 1, art: blobArt },
+  blob: { name: "Blob", cost: 1, atk: 2, hp: 2, movement: 1, art: blobArt },
   bush: { name: "Bush", cost: 2, atk: 1, hp: 4, movement: 1, art: bushArt },
   zombie: {
     name: "Zombie",
@@ -49,7 +49,7 @@ export const CARDS = {
     movement: 1,
     art: zombieArt,
   },
-  saper: { name: "Saper", cost: 3, atk: 3, hp: 2, movement: 2, art: saperArt },
+  saper: { name: "Saper", cost: 3, atk: 3, hp: 2, movement: 3, art: saperArt },
   universman: {
     name: "Univers Man",
     cost: 3,
@@ -75,7 +75,7 @@ export const CARDS = {
     art: mountdogArt,
   },
   lion: { name: "Lion", cost: 4, atk: 5, hp: 3, movement: 3, art: lionArt },
-  hydra: { name: "Hydra", cost: 5, atk: 5, hp: 6, movement: 1, art: hydraArt },
+  hydra: { name: "Hydra", cost: 5, atk: 3, hp: 12, movement: 1, art: hydraArt },
 } satisfies Record<string, Card>;
 
 /** Identifies a kind of card, not a copy of one — see `CardInstance`. */
