@@ -47,6 +47,11 @@ export type GameState = {
   minions: Minion[];
   /** Seat index of the player whose turn it is. */
   activePlayerIndex: number;
+  /** Seat index of the player who has won, once the battle is over — absent
+   *  while it is still live. A player loses the moment they are forced to draw
+   *  from an empty deck at the start of their turn (see `resolveTurn`), which
+   *  hands the win to the other seat. */
+  winner?: number;
 };
 
 /** Deals a starting hand and deck, numbering copies from `firstUid` so no two
@@ -94,8 +99,9 @@ function withPlayer(
 }
 
 /** Moves the top card into a player's hand. Drawing is the countdown — the
- *  deck is the life total, so every draw spends one. A no-op on an empty deck;
- *  running out is a loss, which is not modelled yet. */
+ *  deck is the life total, so every draw spends one. Deck-out is detected in
+ *  `resolveTurn` before the turn's draw ever happens, so the empty-deck no-op
+ *  here is a defensive guard, not the loss rule. */
 function drawCard(player: Player): Player {
   const [top, ...rest] = player.deck;
   if (!top) return player;
@@ -120,16 +126,18 @@ export function step(playerIndex: number): number {
   return playerIndex === 0 ? 1 : -1;
 }
 
-/** A card arrives on its owner's entry cell, so a lane is only playable for
- *  that player on their own turn and while that cell is free. This is about
- *  the turn and the board, not the card — whether the player can afford a
- *  given card is `canAfford`. */
+/** A card arrives on its owner's entry cell, so a lane is only playable while
+ *  the battle is live, for that player on their own turn, and while that cell
+ *  is free — a drag started just before the final beat cannot land a card in a
+ *  finished game. This is about the battle, the turn and the board, not the
+ *  card — whether the player can afford a given card is `canAfford`. */
 export function canPlay(
   state: GameState,
   lane: number,
   playerIndex: number,
 ): boolean {
   return (
+    state.winner === undefined &&
     state.activePlayerIndex === playerIndex &&
     !minionAt(state, lane, entryCell(playerIndex))
   );
@@ -221,11 +229,13 @@ function stepMinion(state: GameState, uid: number): StepResult {
  *  furthest along its direction of travel before the ones behind it — so a
  *  packed column shuffles forward as one. The new active player draws for the
  *  turn in `startTurn`. Returns the resolved state alongside the minions that
- *  struck a blow, in resolve order, so a caller can animate the blows first. */
+ *  struck a blow, in resolve order, so a caller can animate the blows first.
+ *  A no-op once the battle is over. */
 export function resolveTurn(state: GameState): {
   state: GameState;
   fighters: Minion[];
 } {
+  if (state.winner !== undefined) return { state, fighters: [] };
   const active = state.activePlayerIndex;
   const order = state.minions
     .filter((m) => m.owner === active)
@@ -239,6 +249,13 @@ export function resolveTurn(state: GameState): {
     if (result.fighters) fighters.push(...result.fighters);
   }
   const activePlayerIndex = (active + 1) % state.players.length;
+  // Rule (b), deck-out on draw: the incoming player draws for the turn in
+  // startTurn. An empty deck at that point is a failed forced draw — they
+  // survived at zero but cannot draw, so they lose and the next seat wins.
+  if (advanced.players[activePlayerIndex].deck.length === 0) {
+    const winner = (activePlayerIndex + 1) % state.players.length;
+    return { state: { ...advanced, activePlayerIndex, winner }, fighters };
+  }
   const players = advanced.players.map((p, i) =>
     i === activePlayerIndex ? startTurn(p) : p,
   );
