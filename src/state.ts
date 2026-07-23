@@ -4,6 +4,7 @@ import {
   HAND_SIZE,
   LANES,
   LANE_CELLS,
+  MAX_MANA,
   STARTING_DECK,
   type CardId,
 } from "./balance.ts";
@@ -31,7 +32,7 @@ export type Minion = CardInstance & {
  *  GameState, not here.
  *  `mana` is what is left to spend this turn; `maxMana` is the ceiling it
  *  refills to at the start of each of the player's turns, and grows by one every
- *  round — 1 on round 1, 2 on round 2, and so on. */
+ *  round — 1 on round 1, 2 on round 2, and so on — up to MAX_MANA. */
 export type Player = {
   deck: CardInstance[];
   hand: CardInstance[];
@@ -62,9 +63,10 @@ function deal(firstUid: number): Player {
 }
 
 /** Begins a player's turn: raises their mana ceiling by one — so it tracks the
- *  round number — refills mana to that ceiling, and draws for the turn. */
+ *  round number, up to MAX_MANA — refills mana to that ceiling, and draws for
+ *  the turn. */
 function startTurn(player: Player): Player {
-  const maxMana = player.maxMana + 1;
+  const maxMana = Math.min(player.maxMana + 1, MAX_MANA);
   return drawCard({ ...player, maxMana, mana: maxMana });
 }
 

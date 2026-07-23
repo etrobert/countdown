@@ -20,6 +20,9 @@ export type Card = {
 
 export const HAND_SIZE = 5;
 
+/** The mana ceiling stops climbing here, so turns don't run away late-game. */
+export const MAX_MANA = 10;
+
 export const DECK_SIZE = 15;
 
 export const LANES = 3;
