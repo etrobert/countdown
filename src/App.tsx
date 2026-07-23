@@ -3,10 +3,17 @@ import { flushSync } from "react-dom";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
 import Deck from "./Deck.tsx";
+import Draft from "./Draft.tsx";
 import Hand from "./Hand.tsx";
 import { CLASH_MS, type MinionAttack } from "./Minion.tsx";
 import Mana from "./Mana.tsx";
-import { CARDS } from "./balance.ts";
+import {
+  CARD_IDS,
+  CARDS,
+  DRAFT_CHOICES,
+  STARTING_DECK,
+  type CardId,
+} from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
 import { playSummonSound } from "./sound.ts";
@@ -42,6 +49,15 @@ function withViewTransition(update: () => void) {
  *  plain `await` instead of nested timeout callbacks. */
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Rolls a draft offer: DRAFT_CHOICES distinct cards drawn from the pool. */
+function rollDraft(): CardId[] {
+  const pool = [...CARD_IDS];
+  return Array.from(
+    { length: DRAFT_CHOICES },
+    () => pool.splice(Math.floor(Math.random() * pool.length), 1)[0],
+  );
+}
+
 /** Turn each fighter into the bump it plays: everyone strikes the way it
  *  faces — clashers into each other, a milling raider into the deck at the
  *  enemy face. */
@@ -53,6 +69,12 @@ function attacksFor(fighters: Minion[]) {
 
 export default function App() {
   const [state, setState] = useState(initialState);
+  // The run deck: your decklist for the current battle, growing by one at each
+  // draft. Battles reset; this is the only thing that carries across them.
+  const [runDeck, setRunDeck] = useState<CardId[]>(STARTING_DECK);
+  // The cards currently offered at the draft — non-null while the draft screen
+  // is up, between a won battle and the next one.
+  const [draft, setDraft] = useState<CardId[] | null>(null);
   // While set, the board plays these blows (keyed by uid) and input is blocked;
   // the game state stays put until the animation ends and the outcome commits.
   const [attacks, setAttacks] = useState<Map<number, MinionAttack> | null>(
@@ -113,6 +135,23 @@ export default function App() {
     await sleep(1000);
     await playTurn(afterSummon);
   }
+
+  // Leave the draft and start the next battle with the given decklist — the
+  // run deck as-is on a pass, or with the picked card appended.
+  function nextBattle(deck: CardId[]) {
+    setRunDeck(deck);
+    setDraft(null);
+    setState(initialState(deck));
+  }
+
+  if (draft)
+    return (
+      <Draft
+        choices={draft}
+        onPick={(card) => nextBattle([...runDeck, card])}
+        onPass={() => nextBattle(runDeck)}
+      />
+    );
 
   return (
     <main
@@ -181,12 +220,21 @@ export default function App() {
         </div>
       )}
       {over && (
-        // A scrim over the frozen board. Reload to play again for now — the
-        // vitality fade and death flourish are a follow-up.
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60">
+        // A scrim over the frozen board. A win leads on to the draft and the
+        // next battle; a loss is terminal — reload to play again for now.
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-ink/60">
           <p className="font-bold text-6xl text-parchment">
             {youWon ? "You win" : "You lose"}
           </p>
+          {youWon && (
+            <button
+              type="button"
+              onClick={() => setDraft(rollDraft())}
+              className="cursor-pointer rounded-md bg-parchment px-4 py-2 font-bold text-ink transition-transform duration-150 hover:-translate-y-1"
+            >
+              Continue
+            </button>
+          )}
         </div>
       )}
     </main>

@@ -1,6 +1,5 @@
 import {
   CARDS,
-  DECK_SIZE,
   HAND_SIZE,
   LANES,
   LANE_CELLS,
@@ -56,8 +55,8 @@ export type GameState = {
 
 /** Deals a starting hand and deck, numbering copies from `firstUid` so no two
  *  players' cards collide — a uid has to be unique across the whole board. */
-function deal(firstUid: number): Player {
-  const cards = STARTING_DECK.map((card, i) => ({ uid: firstUid + i, card }));
+function deal(deckList: CardId[], firstUid: number): Player {
+  const cards = deckList.map((card, i) => ({ uid: firstUid + i, card }));
   return {
     hand: cards.slice(0, HAND_SIZE),
     deck: cards.slice(HAND_SIZE),
@@ -75,12 +74,17 @@ function startTurn(player: Player): Player {
   return drawCard({ ...player, maxMana, mana: maxMana });
 }
 
-export function initialState(): GameState {
+/** `yourDeck` is seat 0's decklist for this battle — the run deck, which grows
+ *  at each draft. The enemy replays the same starting deck every battle. */
+export function initialState(yourDeck: CardId[] = STARTING_DECK): GameState {
   return {
     // Seat 0 moves first, so it takes its opening turn — and its first mana —
     // right away. Everyone else waits for resolveTurn to bring their turn
     // around.
-    players: [startTurn(deal(0)), deal(DECK_SIZE)],
+    players: [
+      startTurn(deal(yourDeck, 0)),
+      deal(STARTING_DECK, yourDeck.length),
+    ],
     minions: [],
     activePlayerIndex: 0,
   };
