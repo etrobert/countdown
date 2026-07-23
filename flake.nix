@@ -19,31 +19,17 @@
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
-          default = pkgs.stdenv.mkDerivation (finalAttrs: {
+          default = pkgs.buildNpmPackage {
             pname = "countdown";
             version = "0.0.0";
             src = ./.;
-
-            nativeBuildInputs = [
-              pkgs.nodejs
-              pkgs.pnpm
-              pkgs.pnpmConfigHook
-            ];
-
-            pnpmDeps = pkgs.fetchPnpmDeps {
-              inherit (finalAttrs) pname version src;
-              fetcherVersion = 4;
-              hash = "sha256-UgWtJqOpHvkM3G99YcLjiox/9Oj8OdoTh/nkCWrzeiQ=";
-            };
-
-            buildPhase = ''
-              pnpm build
-            '';
+            npmDeps = pkgs.importNpmLock { npmRoot = ./.; };
+            npmConfigHook = pkgs.importNpmLock.npmConfigHook;
 
             installPhase = ''
               cp -r dist $out
             '';
-          });
+          };
         }
       );
 
@@ -89,10 +75,7 @@
         in
         {
           default = pkgs.mkShell {
-            packages = [
-              pkgs.nodejs
-              pkgs.pnpm
-            ];
+            packages = [ pkgs.nodejs ];
           };
         }
       );
