@@ -13,6 +13,7 @@
 
 - [ ] Animate draw to show card going from deck to hand
 - [ ] Minions have movement points
+- [ ] Show card on minion hover on the board
 
 ## Low Priority
 
