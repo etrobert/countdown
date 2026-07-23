@@ -20,13 +20,18 @@ declare module "react" {
   }
 }
 
+/** A card's tilt in the fan, in degrees: cards splay out from the centre. */
+function fanRot(index: number, count: number): number {
+  return (index - (count - 1) / 2) * 4;
+}
+
 /** Fans the hand around its centre so the cards splay like held paper. Values
  *  go out as custom properties so :hover can override them — an inline
  *  `rotate` would outrank the stylesheet. */
 function fan(index: number, count: number): CSSProperties {
   const offset = index - (count - 1) / 2;
   return {
-    "--rot": `${offset * 4}deg`,
+    "--rot": `${fanRot(index, count)}deg`,
     "--dy": `${Math.abs(offset) * 8}px`,
     "--z": index,
   };
@@ -59,20 +64,26 @@ export default function Hand({
 
   useLayoutEffect(() => {
     const origin = originRef?.current?.getBoundingClientRect();
-    for (const { uid } of cards) {
+    for (const [i, { uid }] of cards.entries()) {
       if (dealt.current.has(uid)) continue;
       dealt.current.add(uid);
       const el = cardEls.current.get(uid);
       if (!el || !origin) continue;
-      // Fly from the deck's centre to the card's landing slot. Both rects are
-      // in screen space; the transform is applied in the element's own space,
-      // which the face-down hand's 180° flip inverts — hence the sign.
+      // Screen-space gap from the card's landing slot to the deck's centre —
+      // where the card should appear to start.
       const to = el.getBoundingClientRect();
-      const sign = faceDown ? -1 : 1;
-      const dx =
-        (origin.left + origin.width / 2 - (to.left + to.width / 2)) * sign;
-      const dy =
-        (origin.top + origin.height / 2 - (to.top + to.height / 2)) * sign;
+      const sx = origin.left + origin.width / 2 - (to.left + to.width / 2);
+      const sy = origin.top + origin.height / 2 - (to.top + to.height / 2);
+      // `transform` is applied in the element's own frame, which the fan has
+      // already rotated (and the face-down hand flipped 180°). Rotate the gap
+      // back by that total angle so the flight still reads as screen-space —
+      // otherwise the outermost card, tilted most, starts well off the deck.
+      const angle =
+        (((faceDown ? 180 : 0) + fanRot(i, cards.length)) * Math.PI) / 180;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const dx = sx * cos + sy * sin;
+      const dy = -sx * sin + sy * cos;
       el.animate(
         [
           { transform: `translate(${dx}px, ${dy}px)` },
