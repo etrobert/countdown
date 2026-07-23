@@ -226,19 +226,22 @@ function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-/** The enemy's summon for one turn: play a random affordable card from hand into
- *  a random open lane. A placeholder for a real heuristic — a no-op when nothing
- *  in hand can be paid for or every entry cell is blocked. */
-export function summonMinion(state: GameState, playerIndex: number): GameState {
+/** The enemy's summon decision for one turn: a random affordable card from hand
+ *  and a random open lane, or null when nothing in hand can be paid for or every
+ *  entry cell is blocked. Kept apart from `play` so the caller learns which card
+ *  was chosen — e.g. to sound its summon clip — since `play` only hands back the
+ *  next state. A placeholder for a real heuristic. */
+export function chooseSummon(state: GameState, playerIndex: number) {
   const affordable = state.players[playerIndex].hand.filter((c) =>
     canAfford(state, playerIndex, c.card),
   );
   const openLanes = Array.from({ length: LANES }, (_, lane) => lane).filter(
     (lane) => canPlay(state, lane, playerIndex),
   );
-  if (affordable.length === 0 || openLanes.length === 0) return state;
+  if (affordable.length === 0 || openLanes.length === 0) return null;
 
-  return play(state, playerIndex, pick(affordable).uid, pick(openLanes));
+  const { uid, card } = pick(affordable);
+  return { uid, card, lane: pick(openLanes) };
 }
 
 /** Plays a card from a player's hand into a lane, summoning it at their end of

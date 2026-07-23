@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
@@ -9,7 +9,7 @@ import { CARDS } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
 import { playSummonSound } from "./sound.ts";
-import { endTurn, initialState, summonMinion } from "./state.ts";
+import { chooseSummon, endTurn, initialState, play } from "./state.ts";
 
 // Seats. The local player's hand is face-up and draggable; the enemy's is a row
 // of card backs. Only two seats today — the board is two-sided — but GameState
@@ -41,17 +41,10 @@ export default function App() {
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
 
-  // A minion only enters the list by being summoned, so any uid that wasn't on
-  // the board last render is a fresh spawn — play its summon clip, whether you
-  // dropped it or the enemy did. `seen` carries the previous frame's uids; a
-  // ref (not state) so tracking them doesn't itself trigger a render.
-  const seen = useRef<Set<number>>(new Set());
-  useEffect(() => {
-    for (const minion of state.minions) {
-      if (!seen.current.has(minion.uid)) playSummonSound(minion.card);
-    }
-    seen.current = new Set(state.minions.map((m) => m.uid));
-  }, [state.minions]);
+  // The enemy summon runs mid-async, after `endTurn` has already committed, so
+  // the render-time `state` closure is stale — read the latest through a ref.
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   // End the human's turn, then drive the enemy's one beat at a time so the
   // player can follow along: passing the turn draws for the enemy, then after a
@@ -60,7 +53,16 @@ export default function App() {
   async function handleEndTurn() {
     withViewTransition(() => setState(endTurn));
     await sleep(1000);
-    withViewTransition(() => setState((state) => summonMinion(state, ENEMY)));
+    // The sleep guarantees the endTurn update above has committed, so the ref
+    // holds the state the enemy is deciding from. Choosing the card outside the
+    // updater lets us sound the exact minion it summons.
+    const choice = chooseSummon(stateRef.current, ENEMY);
+    if (choice) {
+      withViewTransition(() =>
+        setState((s) => play(s, ENEMY, choice.uid, choice.lane)),
+      );
+      playSummonSound(choice.card);
+    }
     await sleep(1000);
     withViewTransition(() => setState(endTurn));
   }

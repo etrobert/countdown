@@ -6,6 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type SetStateAction,
 } from "react";
+import { playSummonSound } from "./sound.ts";
 import {
   canAfford,
   canPlay,
@@ -73,7 +74,12 @@ export function useDrag(
 
     const onUp = (e: PointerEvent) => {
       const lane = laneAt(e.clientX, e.clientY);
-      if (lane !== null) setState((s) => play(s, playerIndex, dragUid, lane));
+      // `laneAt` only returns a lane when the play is valid, so dropping there
+      // always summons — sound it. `dragCard` is non-null past the guard above.
+      if (lane !== null) {
+        setState((s) => play(s, playerIndex, dragUid, lane));
+        playSummonSound(dragCard);
+      }
       setDrag(null);
     };
 
