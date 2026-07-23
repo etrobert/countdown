@@ -10,7 +10,7 @@
 - [x] Show a sleep (Zzz) indicator on minions summoned this turn
 - [ ] Minion damaging deck animation
 - [ ] Fix layout shift when hand is empty
-- [ ] Mana
+- [x] Mana
 - [ ] Death/Win condition & animation
 - [ ] First upload of the game online
 - [ ] Fix zoom level
