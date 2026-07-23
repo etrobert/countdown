@@ -1,4 +1,11 @@
-import { CARDS, HAND_SIZE, STARTING_DECK, type CardId } from "./balance.ts";
+import {
+  CARDS,
+  HAND_SIZE,
+  LANES,
+  LANE_CELLS,
+  STARTING_DECK,
+  type CardId,
+} from "./balance.ts";
 
 /** One specific copy of a card. `uid` identifies the copy and stays stable as
  *  it moves, so React can keep the same DOM node and animate it. `card` says
@@ -45,6 +52,26 @@ export function minionAt(state: GameState, lane: number, cell: number) {
  *  free. Mana is not modelled yet, so cost is not checked. */
 export function canPlay(state: GameState, lane: number): boolean {
   return !minionAt(state, lane, 0);
+}
+
+/** Ends your turn. For now this only advances your minions: each walks one
+ *  cell toward the far end, stopping at the last cell or behind another minion.
+ *  Fronts move first so a column shuffles forward without colliding. */
+export function endTurn(state: GameState): GameState {
+  const minions = state.minions.map((m) => ({ ...m }));
+  for (let lane = 0; lane < LANES; lane++) {
+    minions
+      .filter((m) => m.lane === lane)
+      .sort((a, b) => b.cell - a.cell)
+      .forEach((m) => {
+        const ahead = m.cell + 1;
+        const blocked = minions.some(
+          (o) => o.lane === lane && o.cell === ahead,
+        );
+        if (ahead < LANE_CELLS && !blocked) m.cell = ahead;
+      });
+  }
+  return { ...state, minions };
 }
 
 /** Plays a card from hand into a lane, summoning it at your end of that lane. */

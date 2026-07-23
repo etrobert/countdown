@@ -2,7 +2,7 @@ import { useState } from "react";
 import Board from "./Board.tsx";
 import Deck from "./Deck.tsx";
 import Hand from "./Hand.tsx";
-import { draw, initialState, play } from "./state.ts";
+import { draw, endTurn, initialState, play } from "./state.ts";
 
 export default function App() {
   const [state, setState] = useState(initialState);
@@ -25,6 +25,13 @@ export default function App() {
       />
       <Hand cards={state.hand} selected={selected} onSelect={setSelected} />
       <Deck count={state.deck.length} onDraw={() => setState(draw)} />
+      <button
+        type="button"
+        onClick={() => setState(endTurn)}
+        className="absolute bottom-12 left-10 cursor-pointer rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150 hover:-translate-y-1"
+      >
+        End Turn
+      </button>
     </main>
   );
 }
