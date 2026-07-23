@@ -7,12 +7,6 @@ name: Build
   pull_request:
     branches: [main]
 
-# Cancel superseded runs per ref while iterating, but let every main commit
-# finish so its output lands in tower's store (served by harmonia).
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-
 jobs:
   build:
     name: build
