@@ -38,7 +38,7 @@
 
 - [x] Move decks to the side of the board
 - [x] Minion movement animation
-- [ ] Improve AI
+- [x] Improve AI
 - [ ] Death animation
 - [ ] Add effects
 - [ ] Custom card back
