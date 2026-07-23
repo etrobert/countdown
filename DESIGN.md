@@ -36,13 +36,12 @@ Difficulty lives entirely in the AI's three authored decks, not in its logic.
 
 ## Keywords
 
-- **Fast** — movement 3, against a standard of 2 and slow minions at 1.
 - **Breach X** — mills X extra on connect, on top of ATK.
 - **Blood price X** — strong stats, but mill X of your own cards to play it.
 
-Each hooks a different step (movement, connect, on-play) and none interact, so
-there is no cross-product to test. Blood price is the one that makes the
-countdown a resource you can choose to spend.
+Each hooks a different step (connect, on-play) and none interact, so there is no
+cross-product to test. Blood price is the one that makes the countdown a
+resource you can choose to spend.
 
 ## Presentation
 
