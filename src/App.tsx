@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
@@ -8,15 +8,17 @@ import Hand from "./Hand.tsx";
 import { CLASH_MS, type MinionAttack } from "./Minion.tsx";
 import Mana from "./Mana.tsx";
 import Remove from "./Remove.tsx";
-import { CARDS, STARTING_DECK, type CardId } from "./balance.ts";
+import { CARDS, HAND_SIZE, STARTING_DECK, type CardId } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
 import { playSummonSound } from "./sound.ts";
 import {
   chooseSummon,
+  drawCardFor,
   initialState,
   play,
   resolveTurn,
+  startActivePlayerTurn,
   step,
   type GameState,
   type Minion,
@@ -44,6 +46,10 @@ function withViewTransition(update: () => void) {
  *  plain `await` instead of nested timeout callbacks. */
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Gap between opening-deal beats. A touch longer than the 400ms card morph (see
+ *  style.css) so each drawn card lands before the next flies out. */
+const OPENING_DRAW_MS = 450;
+
 /** Turn each fighter into the bump it plays: everyone strikes the way it
  *  faces — clashers into each other, a milling raider into the deck at the
  *  enemy face. */
@@ -70,6 +76,11 @@ export default function App() {
   // Set when you try to drop a card you can't afford; passed to your mana bar
   // so it pulses red, and cleared once the pulse ends.
   const [manaFlash, setManaFlash] = useState(false);
+  // True while the opening hands are being dealt out, card by card. Input is
+  // blocked until the deal finishes and seat 0's first turn opens. Bumped once
+  // per battle by `battleId` so a fresh battle re-runs the deal.
+  const [dealing, setDealing] = useState(true);
+  const [battleId, setBattleId] = useState(0);
   const { drag, dragUid, start } = useDrag(state, setState, YOU, () =>
     setManaFlash(true),
   );
@@ -83,6 +94,35 @@ export default function App() {
   // what the player sees: the scrim and the End Turn button's disabled look.
   const over = state.winner !== undefined;
   const youWon = state.winner === YOU;
+
+  // Deal both opening hands, card by card, then open seat 0's first turn. Each
+  // beat draws one card for each seat inside a View Transition, so the two cards
+  // fly out of their decks side by side and settle into the fan; a pause between
+  // beats lets each morph land. Once HAND_SIZE cards are dealt, seat 0 takes its
+  // turn — its mana and turn draw — and input unlocks.
+  async function dealOpening() {
+    for (let i = 0; i < HAND_SIZE; i++) {
+      withViewTransition(() =>
+        setState((s) => drawCardFor(drawCardFor(s, YOU), ENEMY)),
+      );
+      await sleep(OPENING_DRAW_MS);
+    }
+    withViewTransition(() => setState(startActivePlayerTurn));
+    setDealing(false);
+  }
+
+  // Run the opening deal once per battle. The ref guard makes it fire a single
+  // time per `battleId` even though StrictMode double-invokes effects in dev,
+  // which would otherwise deal two hands.
+  const dealtBattle = useRef(-1);
+  useEffect(() => {
+    if (dealtBattle.current === battleId) return;
+    dealtBattle.current = battleId;
+    dealOpening();
+    // dealOpening only ever draws from the freshly-initialised state via
+    // functional setState updates, so it needs no other reactive deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [battleId]);
 
   // Resolve one player's turn from the given state and return the outcome. If
   // blows land, hold the board and play the bumps, then commit the outcome
@@ -135,7 +175,7 @@ export default function App() {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== " " && event.key !== "F1") return;
-      if (!yourTurn || busy || over || phase !== "battle") return;
+      if (!yourTurn || busy || over || dealing || phase !== "battle") return;
       event.preventDefault();
       handleEndTurn();
     }
@@ -143,13 +183,15 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
     // Re-registers each render so the handler closes over fresh state; the
     // listed deps are the values that gate whether the key does anything.
-  }, [yourTurn, busy, over, phase, state]);
+  }, [yourTurn, busy, over, dealing, phase, state]);
 
   // Leave the between-battles steps and start the next battle with the given
   // decklist — the deck left after adding and removing.
   function nextBattle(deck: CardId[]) {
     setRunDeck(deck);
     setState(initialState(deck));
+    setDealing(true);
+    setBattleId((id) => id + 1);
     setPhase("battle");
   }
 
@@ -213,7 +255,7 @@ export default function App() {
       <Hand
         cards={you.hand}
         dragging={dragUid}
-        onDragStart={busy || !yourTurn ? undefined : start}
+        onDragStart={busy || dealing || !yourTurn ? undefined : start}
       />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
         {yourTurn ? "Your turn" : "Enemy turn"}
@@ -221,10 +263,10 @@ export default function App() {
       <button
         type="button"
         onClick={handleEndTurn}
-        disabled={!yourTurn || busy || over}
+        disabled={!yourTurn || busy || over || dealing}
         className={cn(
           "absolute right-10 bottom-12 rounded-md bg-ink px-4 py-2 font-bold text-parchment transition-transform duration-150",
-          yourTurn && !busy && !over
+          yourTurn && !busy && !over && !dealing
             ? "cursor-pointer hover:-translate-y-1"
             : "cursor-not-allowed opacity-40",
         )}
