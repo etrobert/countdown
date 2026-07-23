@@ -28,6 +28,10 @@ function withViewTransition(update: () => void) {
   document.startViewTransition(() => flushSync(update));
 }
 
+/** A promise that resolves after `ms`, so turn beats can be spaced out with
+ *  plain `await` instead of nested timeout callbacks. */
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export default function App() {
   const [state, setState] = useState(initialState);
   const { drag, dragUid, start } = useDrag(state, setState, YOU);
@@ -36,14 +40,16 @@ export default function App() {
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
 
-  // End the human's turn, then drive the enemy's: it summons a minion (its turn
-  // already drew for it), and after a pause so the player can watch, ends its
-  // own turn back to you.
-  function handleEndTurn() {
-    withViewTransition(() =>
-      setState((state) => summonMinion(endTurn(state), ENEMY)),
-    );
-    setTimeout(() => withViewTransition(() => setState(endTurn)), 2000);
+  // End the human's turn, then drive the enemy's one beat at a time so the
+  // player can follow along: passing the turn draws for the enemy, then after a
+  // second it summons a minion, and a second later it ends its own turn back to
+  // you.
+  async function handleEndTurn() {
+    withViewTransition(() => setState(endTurn));
+    await sleep(1000);
+    withViewTransition(() => setState((state) => summonMinion(state, ENEMY)));
+    await sleep(1000);
+    withViewTransition(() => setState(endTurn));
   }
 
   return (
