@@ -117,6 +117,8 @@ export function canPlay(
  *  `step` (fronts first, so a column shuffles forward without colliding).
  *  A minion summoned this turn holds its ground: it clears its `summoned` mark
  *  here instead of moving, so it first walks on its owner's next turn.
+ *  A minion at the enemy end can walk no further, so instead it attacks that
+ *  deck, milling cards equal to its attack and then leaving the board.
  *  When a minion is blocked by an enemy in the cell ahead it attacks instead of
  *  moving: the two trade damage by their `atk`, and anyone dropped to 0 hp dies
  *  and is cleared from the board. A friendly in the way just holds it up — no
@@ -125,6 +127,10 @@ export function endTurn(state: GameState): GameState {
   const minions = state.minions.map((m) => ({ ...m }));
   const active = state.activePlayerIndex;
   const dir = step(active);
+  // Cards each deck loses this turn to enemy minions reaching its face.
+  const milled = new Array(state.players.length).fill(0);
+  // uids of minions that attacked a deck this turn and leave the board.
+  const spent = new Set<number>();
   for (let lane = 0; lane < LANES; lane++) {
     minions
       .filter((m) => m.lane === lane && m.owner === active)
@@ -138,7 +144,14 @@ export function endTurn(state: GameState): GameState {
           return;
         }
         const ahead = m.cell + dir;
-        if (ahead < 0 || ahead >= LANE_CELLS) return;
+        // Off the far edge: the minion is at the enemy's face and can advance no
+        // further, so it attacks their deck, is spent, and leaves the board.
+        if (ahead < 0 || ahead >= LANE_CELLS) {
+          const opponent = (active + 1) % state.players.length;
+          milled[opponent] += CARDS[m.card].atk;
+          spent.add(m.uid);
+          return;
+        }
         const other = minions.find((o) => o.lane === lane && o.cell === ahead);
         // Nothing ahead: walk forward into the open cell.
         if (!other) {
@@ -153,10 +166,14 @@ export function endTurn(state: GameState): GameState {
         }
       });
   }
-  // Clear the fallen: anyone brought to 0 hp (or below) in combat leaves the board.
-  const survivors = minions.filter((m) => m.hp > 0);
+  const players = state.players.map((p, i) =>
+    milled[i] > 0 ? { ...p, deck: p.deck.slice(milled[i]) } : p,
+  );
+  // Clear the departed: anyone at 0 hp from combat, or spent attacking a deck,
+  // leaves the board.
+  const survivors = minions.filter((m) => m.hp > 0 && !spent.has(m.uid));
   const activePlayerIndex = (active + 1) % state.players.length;
-  return { ...state, minions: survivors, activePlayerIndex };
+  return { ...state, players, minions: survivors, activePlayerIndex };
 }
 
 /** Picks a uniformly random element of a non-empty array. */
@@ -167,10 +184,7 @@ function pick<T>(items: T[]): T {
 /** The enemy's summon for one turn: play a random card from hand into a random
  *  open lane. A placeholder for a real heuristic — a no-op when the hand is
  *  empty or every entry cell is blocked. */
-export function summonMinion(
-  state: GameState,
-  playerIndex: number,
-): GameState {
+export function summonMinion(state: GameState, playerIndex: number): GameState {
   const hand = state.players[playerIndex].hand;
   const openLanes = Array.from({ length: LANES }, (_, lane) => lane).filter(
     (lane) => canPlay(state, lane, playerIndex),
