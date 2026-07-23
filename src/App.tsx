@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { flushSync } from "react-dom";
 import Board from "./Board.tsx";
 import Card from "./Card.tsx";
@@ -41,30 +41,29 @@ export default function App() {
   const enemy = state.players[ENEMY];
   const yourTurn = state.activePlayerIndex === YOU;
 
-  // The enemy summon runs mid-async, after `endTurn` has already committed, so
-  // the render-time `state` closure is stale — read the latest through a ref.
-  const stateRef = useRef(state);
-  stateRef.current = state;
-
   // End the human's turn, then drive the enemy's one beat at a time so the
   // player can follow along: passing the turn draws for the enemy, then after a
   // second it summons a minion, and a second later it ends its own turn back to
-  // you.
+  // you. Each beat is computed from the previous one with the pure state
+  // functions — the closure's `state` is only fresh at click time — which is
+  // also how the enemy's pick surfaces here to sound its clip. The plain
+  // setState calls overwrite anything landing mid-sequence, so a card played
+  // during the enemy's turn would be lost (playing off-turn is due to be
+  // blocked anyway).
   async function handleEndTurn() {
-    withViewTransition(() => setState(endTurn));
+    const afterEnd = endTurn(state);
+    withViewTransition(() => setState(afterEnd));
     await sleep(1000);
-    // The sleep guarantees the endTurn update above has committed, so the ref
-    // holds the state the enemy is deciding from. Choosing the card outside the
-    // updater lets us sound the exact minion it summons.
-    const choice = chooseSummon(stateRef.current, ENEMY);
+    const choice = chooseSummon(afterEnd, ENEMY);
+    const afterSummon = choice
+      ? play(afterEnd, ENEMY, choice.uid, choice.lane)
+      : afterEnd;
     if (choice) {
-      withViewTransition(() =>
-        setState((s) => play(s, ENEMY, choice.uid, choice.lane)),
-      );
+      withViewTransition(() => setState(afterSummon));
       playSummonSound(choice.card);
     }
     await sleep(1000);
-    withViewTransition(() => setState(endTurn));
+    withViewTransition(() => setState(endTurn(afterSummon)));
   }
 
   return (
