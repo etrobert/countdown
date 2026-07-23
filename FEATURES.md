@@ -23,11 +23,12 @@
 - [x] Animate draw to show card going from deck to hand
 - [x] Minions have movement points
 - [x] Show card on minion hover on the board
-- [ ] Fix bug that we can play cards during the enemy turn
-- [ ] Fix bug that the hover card sometimes render below other creatures
+- [x] Fix bug that we can play cards during the enemy turn
+- [x] Fix bug that the hover card sometimes render below other creatures
 - [x] In between match updates: draft 1 of 3 cards after a win
 - [ ] In between match updates: remove cards
 - [ ] Presentation page
+- [ ] Increase character size on the cards
 - [ ] Music
 - [x] Sounds
 - [ ] F1 and Space end turn
@@ -37,6 +38,7 @@
 
 - [x] Move decks to the side of the board
 - [x] Minion movement animation
+- [ ] Improve AI
 - [ ] Death animation
 - [ ] Add effects
 - [ ] Custom card back
