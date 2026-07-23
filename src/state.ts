@@ -1,3 +1,4 @@
+import { shuffle } from "es-toolkit";
 import {
   CARDS,
   HAND_SIZE,
@@ -52,16 +53,6 @@ export type GameState = {
    *  hands the win to the other seat. */
   winner?: number;
 };
-
-/** Fisher–Yates shuffle, returning a new array. */
-function shuffle<T>(items: T[]): T[] {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
 
 /** Deals a starting hand and deck from a fresh shuffle of the decklist,
  *  numbering copies from `firstUid` so no two players' cards collide — a uid
