@@ -25,7 +25,11 @@ export type Card = {
 export const HAND_SIZE = 3;
 
 /** The mana ceiling stops climbing here, so turns don't run away late-game. */
-export const MAX_MANA = 10;
+export const MAX_MANA = 5;
+
+/** Mana granted on the player's first turn, so the opening isn't starved of
+ *  plays; the ceiling climbs by one per turn from here up to MAX_MANA. */
+export const STARTING_MANA = 3;
 
 export const DECK_SIZE = 15;
 

@@ -15,6 +15,7 @@ import { playSummonSound } from "./sound.ts";
 import {
   bossSummon,
   chooseBossAction,
+  drawVoluntary,
   fireball,
   initialState,
   resolveTurn,
@@ -207,9 +208,22 @@ export default function App() {
           boss's hp on the right. */}
       <div className="flex items-center gap-8">
         <div className="grid justify-items-center gap-3">
+          {/* Clicking the deck takes the once-per-turn voluntary draw, inside
+              a View Transition so the card slides into the hand like the turn
+              draw. Gated like the hand drag — and off once the turn's
+              voluntary draw is spent — by withholding onDraw, which renders
+              the deck non-interactive. */}
           <Deck
             count={you.deck.length}
             topUid={you.deck[0]?.uid}
+            onDraw={
+              busy || !yourTurn || over || you.drewThisTurn
+                ? undefined
+                : () =>
+                    withViewTransition(() =>
+                      setState(drawVoluntary(state, YOU)),
+                    )
+            }
             className="relative"
           />
           <Mana
