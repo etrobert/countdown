@@ -2,9 +2,7 @@ import musicUrl from "./assets/music/countdown-2.mp3";
 
 /** The battle track: one file holding twelve equal patterns, calm to frantic.
  *  Exactly one pattern loops at a time; jumping patterns is how the music
- *  tracks the game (see the music effect in App). Pattern bounds are derived
- *  from the decoded duration rather than hard-coded, so the mp3's encoder
- *  padding spreads across all twelve cuts instead of shifting them. */
+ *  tracks the game (see the music effect in App). */
 export const PATTERN_COUNT = 12;
 
 /** Seconds. The short fade is a crossfade masking the click of a mid-wave
@@ -25,6 +23,8 @@ type Loop = {
 let ctx: AudioContext | undefined;
 let master: GainNode | undefined;
 let buffer: AudioBuffer | undefined;
+/** Seconds of decoder lead-in before the music's first sample — see `cuts`. */
+let leadIn = 0;
 let loop: Loop | undefined;
 /** The pattern to start on once the track finishes decoding. */
 let desired = 0;
@@ -45,21 +45,52 @@ async function init(): Promise<void> {
   window.addEventListener("keydown", resume);
   const response = await fetch(musicUrl);
   buffer = await context.decodeAudioData(await response.arrayBuffer());
+  leadIn = findLeadIn(buffer);
   if (!faded) startLoop(desired, 0);
+}
+
+/** How far into the decoded buffer the music actually starts. The mp3 carries
+ *  no Xing/LAME header, so decoders can't strip the encoder delay: the buffer
+ *  opens on ~50ms of injected silence (and the same length of music is lost
+ *  off the end). Measured at runtime rather than hard-coded so it holds under
+ *  any browser's decoder. */
+function findLeadIn(audio: AudioBuffer): number {
+  const threshold = 0.001; // -60dBFS
+  const channels = Array.from({ length: audio.numberOfChannels }, (_, c) =>
+    audio.getChannelData(c),
+  );
+  for (let i = 0; i < audio.length; i++)
+    for (const data of channels)
+      if (Math.abs(data[i]) > threshold) return i / audio.sampleRate;
+  return 0;
+}
+
+/** The bounds of a pattern's loop within the buffer. The export is exactly
+ *  twelve patterns long, so the pattern length is duration / 12 and the grid
+ *  starts at the first audible sample; the last pattern's end is clamped to
+ *  the buffer, short by the tail the encoder delay pushed off the edge. */
+function cuts(
+  audio: AudioBuffer,
+  index: number,
+): { start: number; end: number; length: number } {
+  const length = audio.duration / PATTERN_COUNT;
+  const start = leadIn + index * length;
+  const end = Math.min(start + length, audio.duration);
+  return { start, end, length };
 }
 
 /** Starts the given pattern looping at `phase` seconds into it, crossfading
  *  out any previous loop. */
 function startLoop(index: number, phase: number): void {
   if (!ctx || !master || !buffer) return;
-  const length = buffer.duration / PATTERN_COUNT;
+  const { start, end } = cuts(buffer, index);
   const gain = ctx.createGain();
   gain.connect(master);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.loop = true;
-  source.loopStart = index * length;
-  source.loopEnd = (index + 1) * length;
+  source.loopStart = start;
+  source.loopEnd = end;
   source.connect(gain);
   const now = ctx.currentTime;
   if (loop) {
@@ -69,7 +100,9 @@ function startLoop(index: number, phase: number): void {
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(1, now + JUMP_FADE);
   }
-  source.start(now, index * length + phase);
+  // The phase modulo keeps the entry inside the loop region for the last
+  // pattern, whose clamped end makes it slightly shorter than the grid.
+  source.start(now, start + (phase % (end - start)));
   loop = { source, gain, index, startedAt: now, startPhase: phase };
 }
 
@@ -91,7 +124,7 @@ export function setMusicPattern(index: number): void {
   }
   if (!loop) return startLoop(index, 0);
   if (loop.index === index) return;
-  const length = buffer.duration / PATTERN_COUNT;
+  const { length } = cuts(buffer, index);
   const phase = (loop.startPhase + ctx.currentTime - loop.startedAt) % length;
   startLoop(index, phase);
 }
