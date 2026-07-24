@@ -17,6 +17,8 @@ export type Card = {
   hp: number;
   /** Cells walked per turn when the way is open. */
   movement: number;
+  /** Ability text shown on the card face; cards without an ability omit it. */
+  text?: string;
   art: string;
 };
 
@@ -64,6 +66,7 @@ export const CARDS = {
     atk: 2,
     hp: 4,
     movement: 2,
+    text: "+1 mana crystal while on the board",
     art: wizardArt,
   },
   mountdog: {

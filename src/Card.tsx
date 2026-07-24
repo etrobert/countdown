@@ -36,6 +36,9 @@ export default function Card({
           className="min-h-0 w-full flex-1 rounded-sm object-contain object-bottom mix-blend-multiply"
         />
         <h2 className="text-center text-lg font-bold">{card.name}</h2>
+        {card.text && (
+          <p className="text-center text-xs leading-tight">{card.text}</p>
+        )}
       </div>
       <footer className="flex justify-between font-bold">
         <span
