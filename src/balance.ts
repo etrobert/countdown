@@ -2,6 +2,7 @@ import piouArt from "./assets/piou.png";
 import blobArt from "./assets/blob.png";
 import bushArt from "./assets/bush.png";
 import zombieArt from "./assets/Zombie.png";
+import armArt from "./assets/arm.png";
 import saperArt from "./assets/saper.png";
 import universmanArt from "./assets/UniversMan.png";
 import wizardArt from "./assets/wizard.png";
@@ -52,8 +53,9 @@ export const CARDS = {
     text: "On death, puts its Arm in your deck",
     art: zombieArt,
   },
-  // Token left behind by a dying zombie; borrows the zombie's art for now.
-  arm: { name: "Arm", cost: 1, atk: 1, hp: 1, movement: 1, art: zombieArt },
+  // Token left behind by a dying zombie; its art is the held-up arm cropped
+  // out of the zombie's drawing.
+  arm: { name: "Arm", cost: 1, atk: 1, hp: 1, movement: 1, art: armArt },
   saper: { name: "Saper", cost: 3, atk: 3, hp: 2, movement: 3, art: saperArt },
   universman: {
     name: "Univers Man",
