@@ -211,7 +211,7 @@ function advance(state: GameState, minion: Minion, cell: number): GameState {
 
 /** Cards a raiding minion mills off the enemy deck: its attack, plus the
  *  saper's demolition charge of 2 — its whole reason to reach the far end. */
-export function raidDamage(card: CardId): number {
+function raidDamage(card: CardId): number {
   return CARDS[card].atk + (card === "saper" ? 2 : 0);
 }
 
