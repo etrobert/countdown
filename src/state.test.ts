@@ -394,4 +394,20 @@ describe("boss actions", () => {
     const after = fireball(bossTurn(1));
     expect(after.players[0].deck).toHaveLength(5 - FIREBALL_MILL);
   });
+
+  it("scales volley with power, +1 per BOSS_SCALE_EVERY", () => {
+    // At power 3 the bonus is 1: the volley deals 2 — enough to kill the
+    // 2-hp zombie in front — and each empty lane mills 2 instead of 1.
+    const state = bossTurn(3);
+    state.minions = [minion({ uid: 1, card: "zombie", owner: 0, cell: 3 })];
+    const after = volley(state);
+    expect(after.minions).toHaveLength(0);
+    // Lanes 1-3 are empty: 3 lanes x (VOLLEY_MILL 1 + bonus 1) = 6 of 5 cards.
+    expect(after.players[0].deck).toHaveLength(0);
+  });
+
+  it("scales fireball with power, +1 per BOSS_SCALE_EVERY", () => {
+    const after = fireball(bossTurn(6)); // bonus 2
+    expect(after.players[0].deck).toHaveLength(5 - (FIREBALL_MILL + 2));
+  });
 });

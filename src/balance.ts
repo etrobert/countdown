@@ -104,14 +104,19 @@ export const BOSS_ACTION_WEIGHTS = {
  *  fireballs enter the roll, so the player can build a board first. */
 export const BOSS_SAFE_TURNS = 3;
 
-/** Damage a volley deals to the frontmost player minion in each lane. */
+/** Base damage a volley deals to the frontmost player minion in each lane —
+ *  see `scaleBonus` for how it grows with the boss's power. */
 export const VOLLEY_DAMAGE = 1;
 
-/** Cards a volley mills from the player's deck per empty lane. */
+/** Base cards a volley mills from the player's deck per empty lane. */
 export const VOLLEY_MILL = 1;
 
-/** Cards a fireball mills from the player's deck. */
+/** Base cards a fireball mills from the player's deck. */
 export const FIREBALL_MILL = 2;
+
+/** Boss power per +1 on volley and fireball magnitudes: the actions grow with
+ *  the board the power buys, so the late game threatens on every front. */
+export const BOSS_SCALE_EVERY = 3;
 
 /** Cards offered at the between-battles draft; pick one or pass. */
 export const DRAFT_CHOICES = 3;
