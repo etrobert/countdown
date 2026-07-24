@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAfford,
   canPlay,
+  effectiveMaxMana,
   entryCell,
   initialState,
   play,
@@ -10,18 +11,26 @@ import {
   type GameState,
   type Minion,
 } from "./state.ts";
-import { CARDS, HAND_SIZE, LANE_CELLS, STARTING_DECK } from "./balance.ts";
+import {
+  CARDS,
+  HAND_SIZE,
+  LANE_CELLS,
+  MAX_MANA,
+  STARTING_DECK,
+} from "./balance.ts";
 
 /** A two-player state with stocked decks but no minions, for building combat
  *  scenarios by hand. Decks are non-empty so passing the turn never triggers a
- *  deck-out loss; tests place exactly the minions they care about. */
+ *  deck-out loss; a high `turns` count keeps both mana ceilings at MAX_MANA so
+ *  refills don't perturb the scenarios. Tests place exactly the minions they
+ *  care about. */
 function emptyState(): GameState {
   const stock = () =>
     Array.from({ length: 5 }, (_, i) => ({
       uid: 900 + i,
       card: "bush" as const,
     }));
-  const player = () => ({ deck: stock(), hand: [], mana: 10, maxMana: 10 });
+  const player = () => ({ deck: stock(), hand: [], mana: 10, turns: 20 });
   return {
     players: [player(), player()],
     minions: [],
@@ -48,6 +57,39 @@ describe("board geometry", () => {
     expect(entryCell(1)).toBe(LANE_CELLS - 1);
     expect(step(0)).toBe(1);
     expect(step(1)).toBe(-1);
+  });
+});
+
+describe("mana ceiling", () => {
+  it("derives one crystal per turn the seat has taken", () => {
+    const state = initialState();
+    // Seat 0 started its opening turn: one crystal. Seat 1 hasn't played: none.
+    expect(effectiveMaxMana(state, 0)).toBe(1);
+    expect(effectiveMaxMana(state, 1)).toBe(0);
+  });
+
+  it("advances each seat's ceiling as turns pass, matching the refill", () => {
+    let s = initialState();
+    s = resolveTurn(s).state; // seat 1's first turn
+    expect(effectiveMaxMana(s, 1)).toBe(1);
+    s = resolveTurn(s).state; // seat 0's second turn
+    expect(effectiveMaxMana(s, 0)).toBe(2);
+    // The mana refilled at the start of the turn equals the derived ceiling.
+    expect(s.players[0].mana).toBe(effectiveMaxMana(s, 0));
+  });
+
+  it("caps the natural ceiling at MAX_MANA", () => {
+    // emptyState seats both players at turns: 20, well past the cap.
+    expect(effectiveMaxMana(emptyState(), 0)).toBe(MAX_MANA);
+  });
+
+  it("adds the wizard aura on top of the capped natural ceiling", () => {
+    const state: GameState = {
+      ...emptyState(),
+      minions: [minion({ uid: 1, card: "wizard", owner: 0 })],
+    };
+    expect(effectiveMaxMana(state, 0)).toBe(MAX_MANA + 1);
+    expect(effectiveMaxMana(state, 1)).toBe(MAX_MANA);
   });
 });
 
