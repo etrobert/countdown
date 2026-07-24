@@ -126,17 +126,35 @@ describe("play", () => {
       lane: 2,
       cell: entryCell(0),
       hp: CARDS.lion.hp,
-      // A player's minion arrives awake; only boss minions carry sickness.
-      summoned: false,
+      summoned: true,
     });
   });
 
-  it("lets a player minion step on the turn it is played", () => {
+  it("steps a fresh player minion one cell, then at full speed", () => {
     const base = emptyState();
-    base.players[0].hand = [{ uid: 7, card: "bush" }];
+    base.players[0].hand = [{ uid: 7, card: "piou" }];
     const played = play(base, 0, 7, 0);
+    // The turn it is played, its charge is short: one cell, not piou's 3.
     const { state: after } = resolveTurn(played);
-    expect(after.minions[0].cell).toBe(CARDS.bush.movement);
+    expect(after.minions[0].cell).toBe(1);
+    expect(after.minions[0].summoned).toBe(false);
+    // The next turn it walks its full movement.
+    const { state: next } = resolveTurn({ ...after, activePlayerIndex: 0 });
+    expect(next.minions[0].cell).toBe(1 + CARDS.piou.movement);
+  });
+
+  it("lets a fresh player minion fight the enemy directly ahead", () => {
+    const base = emptyState();
+    base.players[0].hand = [{ uid: 7, card: "zombie" }];
+    base.minions = [
+      // A 1-hp bush parked one cell from your entry: the fresh zombie (atk 2)
+      // strikes it the very turn it lands.
+      minion({ uid: 9, card: "bush", owner: 1, lane: 0, cell: 1 }),
+    ];
+    const played = play(base, 0, 7, 0);
+    const { state: after, fighters } = resolveTurn(played);
+    expect(after.minions.find((m) => m.uid === 9)).toBeUndefined();
+    expect(fighters.map((f) => f.uid).sort()).toEqual([7, 9]);
   });
 
   it("is a no-op when the card is unaffordable", () => {
@@ -175,12 +193,14 @@ describe("drawVoluntary", () => {
 });
 
 describe("resolveTurn", () => {
-  it("holds a summoned minion, then walks it next turn", () => {
+  it("holds a summoned boss minion, then walks it next turn", () => {
     const state: GameState = {
       ...emptyState(),
       activePlayerIndex: 1,
       minions: [minion({ uid: 1, card: "bush", owner: 1, summoned: true })],
     };
+    // Holding the arrival turn is the boss's rule alone (see Minion.summoned).
+    state.players[1] = { deck: [], hand: [], mana: 0, maxMana: 0, hp: 10 };
     // Seat 1's turn resolves: the summoned minion wakes but does not move.
     const woken = resolveTurn(state).state;
     expect(woken.minions[0].cell).toBe(entryCell(1));

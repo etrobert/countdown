@@ -25,9 +25,10 @@ export type CardInstance = { uid: number; card: CardId };
 /** A card that has been played onto the board. Keeps its `uid` from the hand.
  *  `hp` is current health, the one stat that diverges from the printed card.
  *  `owner` is the seat that played it — it only advances on that player's turn.
- *  `summoned` marks a minion that must sit out the turn it arrives, only
- *  starting to walk on its owner's next turn. Only boss minions arrive with
- *  it — a player's minion acts the very turn it is played. */
+ *  `summoned` marks a minion played this turn. A boss minion sits that turn
+ *  out entirely; a player's minion already acts — fighting included — but
+ *  walks at most one cell, so a stream of fast minions can't chain raids
+ *  faster than the boss can wall. */
 export type Minion = CardInstance & {
   owner: number;
   lane: number;
@@ -319,29 +320,36 @@ type StepResult = { state: GameState; fighters?: Minion[] };
  *  board earlier this turn. The clash/raid cases also report the fighters,
  *  snapshotted as they stood so the resolved-away ones can still be animated. */
 function stepMinion(state: GameState, uid: number): StepResult {
-  const minion = state.minions.find((m) => m.uid === uid);
-  if (!minion) return { state };
-  if (minion.summoned) return { state: wake(state, minion) };
+  const found = state.minions.find((m) => m.uid === uid);
+  if (!found) return { state };
+  if (found.summoned && isBoss(state.players[found.owner]))
+    return { state: wake(state, found) };
+  // A player's fresh minion acts right away but its charge is short — movement
+  // capped at one this first turn — and it wakes as it goes.
+  const fresh = found.summoned;
+  const working = fresh ? wake(state, found) : state;
+  const minion = { ...found, summoned: false };
+  const movement = fresh ? 1 : CARDS[minion.card].movement;
   const ahead = minion.cell + step(minion.owner);
   if (ahead < 0 || ahead >= LANE_CELLS)
-    return { state: raid(state, minion), fighters: [minion] };
-  const other = minionAt(state, minion.lane, ahead);
+    return { state: raid(working, minion), fighters: [minion] };
+  const other = minionAt(working, minion.lane, ahead);
   if (!other) {
     // Walk forward one cell per movement point, stopping short of the first
     // occupied cell and at the lane's last cell — raiding and clashing only
     // happen on a turn where the obstacle stands directly ahead at the start.
     let cell = ahead;
-    for (let left = CARDS[minion.card].movement - 1; left > 0; left--) {
+    for (let left = movement - 1; left > 0; left--) {
       const next = cell + step(minion.owner);
       if (next < 0 || next >= LANE_CELLS) break;
-      if (minionAt(state, minion.lane, next)) break;
+      if (minionAt(working, minion.lane, next)) break;
       cell = next;
     }
-    return { state: advance(state, minion, cell) };
+    return { state: advance(working, minion, cell) };
   }
   if (other.owner !== minion.owner)
-    return { state: clash(state, minion, other), fighters: [minion, other] };
-  return { state };
+    return { state: clash(working, minion, other), fighters: [minion, other] };
+  return { state: working };
 }
 
 /** Ends the active player's turn: each of that player's minions takes its step
@@ -407,10 +415,9 @@ function pick<T>(items: T[]): T {
 }
 
 /** Plays a card from a player's hand into a lane, summoning it at their end of
- *  that lane and spending its mana cost. A deck player's minion arrives awake
- *  and walks this very turn; only the boss's carry summoning sickness (see
- *  `bossSummon`). A no-op if the lane is blocked or the player cannot afford
- *  the card. */
+ *  that lane and spending its mana cost. The minion arrives marked `summoned`;
+ *  what that costs it depends on its owner — see `Minion`. A no-op if the lane
+ *  is blocked or the player cannot afford the card. */
 export function play(
   state: GameState,
   playerIndex: number,
@@ -436,7 +443,7 @@ export function play(
         lane,
         cell: entryCell(playerIndex),
         hp: CARDS[instance.card].hp,
-        summoned: isBoss(state.players[playerIndex]),
+        summoned: true,
       },
     ],
   };

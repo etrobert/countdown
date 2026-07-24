@@ -74,9 +74,11 @@ export default function Minion({
       >
         <Card card={card} hp={minion.hp} />
       </div>
-      {/* Summoned this turn: it sits still and sleeps. A trio of drifting z's
-          signals it can't advance yet — it wakes on its owner's next turn. */}
-      {minion.summoned && (
+      {/* A boss minion summoned this turn sits still and sleeps: a trio of
+          drifting z's signals it can't advance yet — it wakes on its owner's
+          next turn. Your own fresh minions already act (one short step), so
+          they don't sleep. */}
+      {minion.summoned && minion.owner !== 0 && (
         <div
           className="pointer-events-none absolute -top-1 right-0.5 flex items-start text-edge"
           aria-label="Resting — summoned this turn"
