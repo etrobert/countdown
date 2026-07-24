@@ -126,8 +126,17 @@ describe("play", () => {
       lane: 2,
       cell: entryCell(0),
       hp: CARDS.lion.hp,
-      summoned: true,
+      // A player's minion arrives awake; only boss minions carry sickness.
+      summoned: false,
     });
+  });
+
+  it("lets a player minion step on the turn it is played", () => {
+    const base = emptyState();
+    base.players[0].hand = [{ uid: 7, card: "bush" }];
+    const played = play(base, 0, 7, 0);
+    const { state: after } = resolveTurn(played);
+    expect(after.minions[0].cell).toBe(CARDS.bush.movement);
   });
 
   it("is a no-op when the card is unaffordable", () => {
@@ -166,18 +175,19 @@ describe("drawVoluntary", () => {
 });
 
 describe("resolveTurn", () => {
-  it("holds a freshly summoned minion, then walks it next turn", () => {
+  it("holds a summoned minion, then walks it next turn", () => {
     const state: GameState = {
       ...emptyState(),
-      minions: [minion({ uid: 1, card: "bush", owner: 0, summoned: true })],
+      activePlayerIndex: 1,
+      minions: [minion({ uid: 1, card: "bush", owner: 1, summoned: true })],
     };
-    // Seat 0's turn resolves: the summoned minion wakes but does not move.
+    // Seat 1's turn resolves: the summoned minion wakes but does not move.
     const woken = resolveTurn(state).state;
-    expect(woken.minions[0].cell).toBe(0);
+    expect(woken.minions[0].cell).toBe(entryCell(1));
     expect(woken.minions[0].summoned).toBe(false);
-    // Back to seat 0: now it walks bush's movement (2) forward.
-    const walked = resolveTurn({ ...woken, activePlayerIndex: 0 }).state;
-    expect(walked.minions[0].cell).toBe(CARDS.bush.movement);
+    // Back to seat 1: now it walks bush's movement (2) forward.
+    const walked = resolveTurn({ ...woken, activePlayerIndex: 1 }).state;
+    expect(walked.minions[0].cell).toBe(entryCell(1) - CARDS.bush.movement);
   });
 
   it("clashes two facing minions, dealing attack as damage", () => {
@@ -322,6 +332,16 @@ describe("boss actions", () => {
       expect(m.uid).toBeGreaterThanOrEqual(910);
     }
     expect(after.nextUid).toBe(910 + summoned.length);
+  });
+
+  it("keeps summoning sickness on boss minions", () => {
+    // Power 1 buys exactly one cost-1 minion; resolving the boss's turn wakes
+    // it on its entry cell instead of stepping it.
+    const { state: summoned } = bossSummon(bossTurn(1));
+    expect(summoned.minions).toHaveLength(1);
+    const { state: after } = resolveTurn(summoned);
+    expect(after.minions[0].cell).toBe(entryCell(1));
+    expect(after.minions[0].summoned).toBe(false);
   });
 
   it("fizzles a summon with no budget", () => {

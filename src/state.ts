@@ -25,8 +25,9 @@ export type CardInstance = { uid: number; card: CardId };
 /** A card that has been played onto the board. Keeps its `uid` from the hand.
  *  `hp` is current health, the one stat that diverges from the printed card.
  *  `owner` is the seat that played it — it only advances on that player's turn.
- *  `summoned` marks a minion played this turn: it sits still on the turn it
- *  arrives and only starts walking on its owner's next turn. */
+ *  `summoned` marks a minion that must sit out the turn it arrives, only
+ *  starting to walk on its owner's next turn. Only boss minions arrive with
+ *  it — a player's minion acts the very turn it is played. */
 export type Minion = CardInstance & {
   owner: number;
   lane: number;
@@ -406,8 +407,10 @@ function pick<T>(items: T[]): T {
 }
 
 /** Plays a card from a player's hand into a lane, summoning it at their end of
- *  that lane and spending its mana cost. A no-op if the lane is blocked or the
- *  player cannot afford the card. */
+ *  that lane and spending its mana cost. A deck player's minion arrives awake
+ *  and walks this very turn; only the boss's carry summoning sickness (see
+ *  `bossSummon`). A no-op if the lane is blocked or the player cannot afford
+ *  the card. */
 export function play(
   state: GameState,
   playerIndex: number,
@@ -433,7 +436,7 @@ export function play(
         lane,
         cell: entryCell(playerIndex),
         hp: CARDS[instance.card].hp,
-        summoned: true,
+        summoned: isBoss(state.players[playerIndex]),
       },
     ],
   };
