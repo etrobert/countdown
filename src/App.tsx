@@ -8,9 +8,10 @@ import Hand from "./Hand.tsx";
 import { CLASH_MS, type MinionAttack } from "./Minion.tsx";
 import Mana from "./Mana.tsx";
 import Remove from "./Remove.tsx";
-import { CARDS, STARTING_DECK, type CardId } from "./balance.ts";
+import { CARDS, HAND_SIZE, STARTING_DECK, type CardId } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
+import { fadeOutMusic, PATTERN_COUNT, setMusicPattern } from "./music.ts";
 import { playSummonSound } from "./sound.ts";
 import {
   chooseSummon,
@@ -151,6 +152,23 @@ export default function App() {
     // Re-registers each render so the handler closes over fresh state; the
     // listed deps are the values that gate whether the key does anything.
   }, [yourTurn, busy, over, phase, state]);
+
+  // Adaptive music: the track is twelve patterns, calm to frantic, and the
+  // deck is the life total — the fewer cards left, the tenser the loop. The
+  // baseline is your deck as dealt after the opening draw, and the endpoints
+  // are pinned: a full deck loops the first pattern, an empty one the last,
+  // whatever size the run deck has grown to. Between battles the first pattern
+  // keeps looping as ambience; the end-of-battle scrim fades the music out,
+  // and the next screen brings it back.
+  const deckLeft = you.deck.length;
+  useEffect(() => {
+    if (phase !== "battle") return setMusicPattern(0);
+    if (over) return fadeOutMusic();
+    const baseline = Math.max(1, runDeck.length - HAND_SIZE - 1);
+    const last = PATTERN_COUNT - 1;
+    const stress = Math.round((last * (baseline - deckLeft)) / baseline);
+    setMusicPattern(Math.min(last, Math.max(0, stress)));
+  }, [phase, over, deckLeft, runDeck]);
 
   // Leave the between-battles steps and start the next battle with the given
   // decklist — the deck left after adding and removing.
