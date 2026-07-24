@@ -66,7 +66,7 @@ export const CARDS = {
     atk: 2,
     hp: 4,
     movement: 2,
-    text: "+1 mana crystal while on the board",
+    text: "+1 mana crystal while in play",
     art: wizardArt,
   },
   mountdog: {
