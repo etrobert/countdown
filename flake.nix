@@ -33,8 +33,16 @@
             pnpmDeps = pkgs.fetchPnpmDeps {
               inherit (finalAttrs) pname version src;
               fetcherVersion = 4;
-              hash = "sha256-I3OyshUDGMO2TfHsrWziPJkUMO2DZ7VAlNAMlew8P/o=";
+              hash = "sha256-pQG/7ERxCgn6+7hl2TMbXMXzHumSf+VNoNN16oWjuEY=";
             };
+
+            # Run the unit tests before building, so `nix build` (and CI) fails
+            # on a red suite.
+            doCheck = true;
+
+            checkPhase = ''
+              pnpm test
+            '';
 
             buildPhase = ''
               pnpm build
