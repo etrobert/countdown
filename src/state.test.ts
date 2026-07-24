@@ -4,6 +4,7 @@ import {
   canAfford,
   canPlay,
   chooseBossAction,
+  drawVoluntary,
   entryCell,
   fireball,
   initialState,
@@ -134,6 +135,33 @@ describe("play", () => {
     base.players[0].hand = [{ uid: 7, card: "lion" }];
     base.players[0].mana = 1;
     expect(play(base, 0, 7, 0)).toBe(base);
+  });
+});
+
+describe("drawVoluntary", () => {
+  it("moves the top card to hand, once per turn", () => {
+    const state = emptyState();
+    const top = state.players[0].deck[0];
+    const once = drawVoluntary(state, 0);
+    expect(once.players[0].hand).toEqual([top]);
+    expect(once.players[0].deck).toHaveLength(4);
+    // The turn's voluntary draw is spent: a second call changes nothing.
+    expect(drawVoluntary(once, 0)).toBe(once);
+  });
+
+  it("refuses a draw off-turn", () => {
+    const state = emptyState();
+    expect(drawVoluntary(state, 1)).toBe(state);
+  });
+
+  it("comes back when the turn does", () => {
+    const drawn = drawVoluntary(emptyState(), 0);
+    // Two resolves bring the turn back around; startTurn clears the flag.
+    const around = resolveTurn(resolveTurn(drawn).state).state;
+    // Hand holds the voluntary draw plus the turn's own; a fresh voluntary
+    // draw goes through again.
+    expect(around.players[0].hand).toHaveLength(2);
+    expect(drawVoluntary(around, 0).players[0].hand).toHaveLength(3);
   });
 });
 
