@@ -1,11 +1,18 @@
 import { shuffle } from "es-toolkit";
 import {
+  BOSS_ACTION_WEIGHTS,
+  BOSS_HP,
+  BOSS_SAFE_TURNS,
+  CARD_IDS,
   CARDS,
+  FIREBALL_MILL,
   HAND_SIZE,
   LANES,
   LANE_CELLS,
   MAX_MANA,
   STARTING_DECK,
+  VOLLEY_DAMAGE,
+  VOLLEY_MILL,
   type CardId,
 } from "./balance.ts";
 
@@ -40,7 +47,24 @@ export type Player = {
   hand: CardInstance[];
   mana: number;
   maxMana: number;
+  /** The boss's life total — present only on the boss seat, which is what
+   *  makes a seat the boss (see `isBoss`). The boss has no deck, hand, or
+   *  mana; raids spend its hp instead of milling. */
+  hp?: number;
+  /** The boss's summon budget: its whole turn economy in place of mana. Grows
+   *  by one at the start of each boss turn — mirroring the player's mana ramp —
+   *  with no ceiling, so it doubles as the boss turn number. */
+  power?: number;
 };
+
+/** Whether a seat is the boss: it has hp instead of a deck for a life total. */
+export function isBoss(player: Player): player is Player & { hp: number } {
+  return player.hp !== undefined;
+}
+
+/** What the boss will do on its coming turn, revealed a turn ahead so the
+ *  player can play around it. */
+export type BossAction = "summon" | "volley" | "fireball";
 
 export type GameState = {
   /** Every player in the battle, in seating order. Two today; the array leaves
@@ -50,10 +74,16 @@ export type GameState = {
   /** Seat index of the player whose turn it is. */
   activePlayerIndex: number;
   /** Seat index of the player who has won, once the battle is over — absent
-   *  while it is still live. A player loses the moment they are forced to draw
-   *  from an empty deck at the start of their turn (see `resolveTurn`), which
-   *  hands the win to the other seat. */
+   *  while it is still live. A deck player loses the moment they are forced to
+   *  draw from an empty deck at the start of their turn (see `resolveTurn`);
+   *  the boss loses when a raid empties its hp (see `raid`). Either way the
+   *  other seat wins. */
   winner?: number;
+  /** The boss action telegraphed for its coming turn — see `chooseBossAction`. */
+  telegraph?: BossAction;
+  /** The next unused minion uid. Starts past every dealt card, so
+   *  boss-summoned minions can never collide with cards from a deck. */
+  nextUid: number;
 };
 
 /** Deals a starting hand and deck from a fresh shuffle of the decklist,
@@ -101,19 +131,28 @@ function startTurn(player: Player, bonus: number): Player {
   return drawCard({ ...player, maxMana, mana: maxMana + bonus });
 }
 
+/** Begins the boss's turn — its side of `startTurn`: power grows by one and
+ *  nothing is drawn or refilled, since power is the boss's whole economy. */
+function empower(player: Player): Player {
+  return { ...player, power: (player.power ?? 0) + 1 };
+}
+
 /** `yourDeck` is seat 0's decklist for this battle — the run deck, which grows
- *  at each draft. The enemy replays the same starting deck every battle. */
+ *  at each draft. Seat 1 is the boss: no cards, just a life total. */
 export function initialState(yourDeck: CardId[] = STARTING_DECK): GameState {
   return {
     // Seat 0 moves first, so it takes its opening turn — and its first mana —
-    // right away. Everyone else waits for resolveTurn to bring their turn
-    // around.
+    // right away.
     players: [
       startTurn(deal(yourDeck, 0), 0),
-      deal(STARTING_DECK, yourDeck.length),
+      { deck: [], hand: [], mana: 0, maxMana: 0, hp: BOSS_HP, power: 0 },
     ],
     minions: [],
     activePlayerIndex: 0,
+    // Boss turn 1 sits inside the safe runway, so the pre-rolled telegraph is
+    // always a summon.
+    telegraph: "summon",
+    nextUid: yourDeck.length,
   };
 }
 
@@ -204,17 +243,21 @@ function advance(state: GameState, minion: Minion, cell: number): GameState {
   };
 }
 
-/** A minion at the enemy's face attacks their deck — milling cards equal to its
- *  attack — then leaves the board, its charge spent. */
+/** A minion at the enemy's face attacks their life total — hp for the boss,
+ *  milled cards for a deck player, either way its attack's worth — then leaves
+ *  the board, its charge spent. The blow that empties the boss's hp wins the
+ *  battle on the spot. */
 function raid(state: GameState, minion: Minion): GameState {
   const opponent = (minion.owner + 1) % state.players.length;
-  const players = state.players.map((p, i) =>
-    i === opponent ? { ...p, deck: p.deck.slice(CARDS[minion.card].atk) } : p,
-  );
+  const target = state.players[opponent];
+  const atk = CARDS[minion.card].atk;
+  const hit = isBoss(target)
+    ? { ...target, hp: target.hp - atk }
+    : { ...target, deck: target.deck.slice(atk) };
   return {
-    ...state,
-    players,
+    ...withPlayer(state, opponent, hit),
     minions: state.minions.filter((m) => m.uid !== minion.uid),
+    ...(isBoss(hit) && hit.hp <= 0 && { winner: minion.owner }),
   };
 }
 
@@ -268,10 +311,10 @@ function stepMinion(state: GameState, uid: number): StepResult {
 
 /** Ends the active player's turn: each of that player's minions takes its step
  *  (see `stepMinion`) folded over the state, then the turn passes to the next
- *  seat, who gets their mana for the turn. Fronts step first — the minion
- *  furthest along its direction of travel before the ones behind it — so a
- *  packed column shuffles forward as one. The new active player draws for the
- *  turn in `startTurn`. Returns the resolved state alongside the minions that
+ *  seat, who gets their mana — or, for the boss, power — for the turn. Fronts
+ *  step first — the minion furthest along its direction of travel before the
+ *  ones behind it — so a packed column shuffles forward as one. The new active
+ *  player draws for the turn in `startTurn`. Returns the resolved state alongside the minions that
  *  struck a blow, in resolve order, so a caller can animate the blows first.
  *  A no-op once the battle is over. */
 export function resolveTurn(state: GameState): {
@@ -300,16 +343,25 @@ export function resolveTurn(state: GameState): {
       mana: Math.min(p.mana, effectiveMaxMana(advanced, i)),
     })),
   };
+  // A winner decided mid-fold — a raid that felled the boss — ends the battle
+  // before the turn ever passes, so it outranks the deck-out check below.
+  if (advanced.winner !== undefined) return { state: advanced, fighters };
   const activePlayerIndex = (active + 1) % state.players.length;
   // Rule (b), deck-out on draw: the incoming player draws for the turn in
   // startTurn. An empty deck at that point is a failed forced draw — they
   // survived at zero but cannot draw, so they lose and the next seat wins.
-  if (advanced.players[activePlayerIndex].deck.length === 0) {
+  // The boss never draws, so it cannot deck out.
+  const incoming = advanced.players[activePlayerIndex];
+  if (!isBoss(incoming) && incoming.deck.length === 0) {
     const winner = (activePlayerIndex + 1) % state.players.length;
     return { state: { ...advanced, activePlayerIndex, winner }, fighters };
   }
   const players = advanced.players.map((p, i) =>
-    i === activePlayerIndex ? startTurn(p, manaBonus(advanced, i)) : p,
+    i !== activePlayerIndex
+      ? p
+      : isBoss(p)
+        ? empower(p)
+        : startTurn(p, manaBonus(advanced, i)),
   );
   return { state: { ...advanced, activePlayerIndex, players }, fighters };
 }
@@ -317,27 +369,6 @@ export function resolveTurn(state: GameState): {
 /** Picks a uniformly random element of a non-empty array. */
 function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
-}
-
-/** The enemy's summon decision for one turn: the strongest affordable card from
- *  hand — the most atk+hp it can put on the board — dropped into a random open
- *  lane, or null when nothing in hand can be paid for or every entry cell is
- *  blocked. Kept apart from `play` so the caller learns which card was chosen —
- *  e.g. to sound its summon clip — since `play` only hands back the next state. */
-export function chooseSummon(state: GameState, playerIndex: number) {
-  const affordable = state.players[playerIndex].hand.filter((c) =>
-    canAfford(state, playerIndex, c.card),
-  );
-  const openLanes = Array.from({ length: LANES }, (_, lane) => lane).filter(
-    (lane) => canPlay(state, lane, playerIndex),
-  );
-  if (affordable.length === 0 || openLanes.length === 0) return null;
-
-  // Prefer the biggest body (atk+hp); ties broken randomly so play still varies.
-  const value = (c: CardInstance) => CARDS[c.card].atk + CARDS[c.card].hp;
-  const best = Math.max(...affordable.map(value));
-  const { uid, card } = pick(affordable.filter((c) => value(c) === best));
-  return { uid, card, lane: pick(openLanes) };
 }
 
 /** Plays a card from a player's hand into a lane, summoning it at their end of
@@ -372,4 +403,99 @@ export function play(
       },
     ],
   };
+}
+
+/** Rolls the telegraph for the boss's next turn, one turn ahead — while the
+ *  boss's power is T the roll decides turn T+1, so the player always sees the
+ *  action coming. The first BOSS_SAFE_TURNS boss turns are hard-forced to
+ *  "summon"; after the runway the action is drawn by BOSS_ACTION_WEIGHTS. */
+export function chooseBossAction(state: GameState): BossAction {
+  const boss = state.players.find(isBoss);
+  if ((boss?.power ?? 0) + 1 <= BOSS_SAFE_TURNS) return "summon";
+  const roll = Math.random();
+  if (roll < BOSS_ACTION_WEIGHTS.summon) return "summon";
+  if (roll < BOSS_ACTION_WEIGHTS.summon + BOSS_ACTION_WEIGHTS.volley)
+    return "volley";
+  return "fireball";
+}
+
+/** The boss's summon action: a budget equal to its current power, spent on
+ *  uniformly random affordable cards — conjured from the whole pool, since the
+ *  boss holds no hand — dropped into uniformly random open lanes until no card
+ *  is affordable or no entry cell is free. Boss minions keep summoning
+ *  sickness. A blocked-out or powerless boss simply fizzles: no re-roll. Also
+ *  returns the cards summoned, in order, so the caller can sound them. */
+export function bossSummon(state: GameState): {
+  state: GameState;
+  summoned: CardId[];
+} {
+  const bossIndex = state.players.findIndex(isBoss);
+  const summoned: CardId[] = [];
+  let budget = state.players[bossIndex].power ?? 0;
+  let next = state;
+  for (;;) {
+    const affordable = CARD_IDS.filter((c) => CARDS[c].cost <= budget);
+    const openLanes = Array.from({ length: LANES }, (_, lane) => lane).filter(
+      (lane) => canPlay(next, lane, bossIndex),
+    );
+    if (affordable.length === 0 || openLanes.length === 0) break;
+    const card = pick(affordable);
+    budget -= CARDS[card].cost;
+    summoned.push(card);
+    next = {
+      ...next,
+      nextUid: next.nextUid + 1,
+      minions: [
+        ...next.minions,
+        {
+          uid: next.nextUid,
+          card,
+          owner: bossIndex,
+          lane: pick(openLanes),
+          cell: entryCell(bossIndex),
+          hp: CARDS[card].hp,
+          summoned: true,
+        },
+      ],
+    };
+  }
+  return { state: next, summoned };
+}
+
+/** The boss's volley action: in each lane, the frontmost player minion — the
+ *  one furthest along its walk — takes VOLLEY_DAMAGE and dies at 0 hp; a lane
+ *  with no player minion lets the shot through to mill VOLLEY_MILL from the
+ *  player's deck instead. Boss minions are never hit. Any deck-out this brings
+ *  on is caught by the usual check in `resolveTurn`. */
+export function volley(state: GameState): GameState {
+  const fronts = Array.from({ length: LANES }, (_, lane) =>
+    state.minions
+      .filter((m) => m.owner === 0 && m.lane === lane)
+      .reduce<
+        Minion | undefined
+      >((a, b) => (a && a.cell > b.cell ? a : b), undefined),
+  );
+  const hit = new Set(fronts.filter((m) => m !== undefined).map((m) => m.uid));
+  const minions = state.minions
+    .map((m) => (hit.has(m.uid) ? { ...m, hp: m.hp - VOLLEY_DAMAGE } : m))
+    .filter((m) => m.hp > 0);
+  const misses = fronts.filter((m) => m === undefined).length;
+  const player = state.players[0];
+  return {
+    ...withPlayer(state, 0, {
+      ...player,
+      deck: player.deck.slice(misses * VOLLEY_MILL),
+    }),
+    minions,
+  };
+}
+
+/** The boss's fireball action: mills FIREBALL_MILL straight off the player's
+ *  deck, ignoring the board entirely. */
+export function fireball(state: GameState): GameState {
+  const player = state.players[0];
+  return withPlayer(state, 0, {
+    ...player,
+    deck: player.deck.slice(FIREBALL_MILL),
+  });
 }
