@@ -12,12 +12,13 @@ import type { CardId } from "./balance.ts";
 
 /** The clip each card plays as it lands on the board. Most cards have a
  *  same-named file; `saper` and `universman` have no match of their own, so
- *  they borrow the two remaining clips. */
+ *  they borrow the two remaining clips, and the arm borrows its zombie's. */
 const SUMMON_SOUNDS: Record<CardId, string> = {
   piou: piouSound,
   blob: blobSound,
   bush: bushSound,
   zombie: zombieSound,
+  arm: zombieSound,
   saper: skeletonSound,
   universman: cubalibreSound,
   wizard: wizardSound,
