@@ -10,7 +10,13 @@ import {
   type GameState,
   type Minion,
 } from "./state.ts";
-import { CARDS, HAND_SIZE, LANE_CELLS, STARTING_DECK } from "./balance.ts";
+import {
+  BOSS_HP,
+  CARDS,
+  HAND_SIZE,
+  LANE_CELLS,
+  STARTING_DECK,
+} from "./balance.ts";
 
 /** A two-player state with stocked decks but no minions, for building combat
  *  scenarios by hand. Decks are non-empty so passing the turn never triggers a
@@ -52,27 +58,25 @@ describe("board geometry", () => {
 });
 
 describe("initialState", () => {
-  it("deals a hand and takes seat 0's opening turn", () => {
+  it("deals seat 0 and seats the boss with hp instead of cards", () => {
     const state = initialState();
     expect(state.players).toHaveLength(2);
-    // Seat 1 is dealt but idle: a clean starting hand.
-    expect(state.players[1].hand).toHaveLength(HAND_SIZE);
-    expect(state.players[1].deck).toHaveLength(
-      STARTING_DECK.length - HAND_SIZE,
-    );
+    // Seat 1 is the boss: no cards, just a life total.
+    expect(state.players[1].hand).toHaveLength(0);
+    expect(state.players[1].deck).toHaveLength(0);
+    expect(state.players[1].hp).toBe(BOSS_HP);
     // Seat 0 opened its turn, drawing one card for the turn: hand grows by one,
-    // deck shrinks by one, and mana is granted; seat 1 still waits at zero.
+    // deck shrinks by one, and mana is granted.
     expect(state.players[0].hand).toHaveLength(HAND_SIZE + 1);
     expect(state.players[0].deck).toHaveLength(
       STARTING_DECK.length - HAND_SIZE - 1,
     );
     expect(state.players[0].mana).toBe(1);
-    expect(state.players[1].mana).toBe(0);
     expect(state.activePlayerIndex).toBe(0);
     expect(state.winner).toBeUndefined();
   });
 
-  it("gives every card copy a unique uid across both players", () => {
+  it("gives every card copy a unique uid", () => {
     const state = initialState();
     const uids = state.players.flatMap((p) =>
       [...p.hand, ...p.deck].map((c) => c.uid),
@@ -153,6 +157,42 @@ describe("resolveTurn", () => {
     expect(after.minions.find((m) => m.uid === 2)).toBeUndefined();
     expect(survivor?.hp).toBe(CARDS.lion.hp - CARDS.wizard.atk);
     expect(fighters.map((f) => f.uid).sort()).toEqual([1, 2]);
+  });
+
+  it("spends the boss's hp on a raid instead of milling", () => {
+    const state: GameState = {
+      ...emptyState(),
+      minions: [
+        minion({ uid: 1, card: "lion", owner: 0, cell: LANE_CELLS - 1 }),
+      ],
+    };
+    state.players[1] = { deck: [], hand: [], mana: 0, maxMana: 0, hp: 10 };
+    const { state: after } = resolveTurn(state);
+    expect(after.players[1].hp).toBe(10 - CARDS.lion.atk);
+    expect(after.winner).toBeUndefined();
+    expect(after.minions).toHaveLength(0);
+  });
+
+  it("wins for the player when a raid empties the boss's hp, even mid-deck-out", () => {
+    const state: GameState = {
+      ...emptyState(),
+      minions: [
+        minion({ uid: 1, card: "lion", owner: 0, cell: LANE_CELLS - 1 }),
+      ],
+    };
+    state.players[1] = { deck: [], hand: [], mana: 0, maxMana: 0, hp: 3 };
+    // The player's own deck is dry: the lethal raid still outranks any
+    // deck-out, so the tie goes to the player.
+    state.players[0].deck = [];
+    expect(resolveTurn(state).state.winner).toBe(0);
+  });
+
+  it("never decks the boss out", () => {
+    const state = emptyState();
+    state.players[1] = { deck: [], hand: [], mana: 0, maxMana: 0, hp: 10 };
+    const { state: after } = resolveTurn(state);
+    expect(after.winner).toBeUndefined();
+    expect(after.activePlayerIndex).toBe(1);
   });
 
   it("raids the enemy deck when a minion reaches their face", () => {

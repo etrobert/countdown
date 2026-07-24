@@ -86,6 +86,9 @@ export type CardId = keyof typeof CARDS;
 
 export const CARD_IDS = Object.keys(CARDS) as CardId[];
 
+/** The boss's life total. Raids spend it instead of milling a deck. */
+export const BOSS_HP = 12;
+
 /** Cards offered at the between-battles draft; pick one or pass. */
 export const DRAFT_CHOICES = 3;
 

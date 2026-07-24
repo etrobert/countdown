@@ -1,5 +1,6 @@
 import { shuffle } from "es-toolkit";
 import {
+  BOSS_HP,
   CARDS,
   HAND_SIZE,
   LANES,
@@ -40,7 +41,16 @@ export type Player = {
   hand: CardInstance[];
   mana: number;
   maxMana: number;
+  /** The boss's life total — present only on the boss seat, which is what
+   *  makes a seat the boss (see `isBoss`). The boss has no deck, hand, or
+   *  mana; raids spend its hp instead of milling. */
+  hp?: number;
 };
+
+/** Whether a seat is the boss: it has hp instead of a deck for a life total. */
+export function isBoss(player: Player): player is Player & { hp: number } {
+  return player.hp !== undefined;
+}
 
 export type GameState = {
   /** Every player in the battle, in seating order. Two today; the array leaves
@@ -50,9 +60,10 @@ export type GameState = {
   /** Seat index of the player whose turn it is. */
   activePlayerIndex: number;
   /** Seat index of the player who has won, once the battle is over — absent
-   *  while it is still live. A player loses the moment they are forced to draw
-   *  from an empty deck at the start of their turn (see `resolveTurn`), which
-   *  hands the win to the other seat. */
+   *  while it is still live. A deck player loses the moment they are forced to
+   *  draw from an empty deck at the start of their turn (see `resolveTurn`);
+   *  the boss loses when a raid empties its hp (see `raid`). Either way the
+   *  other seat wins. */
   winner?: number;
 };
 
@@ -102,15 +113,14 @@ function startTurn(player: Player, bonus: number): Player {
 }
 
 /** `yourDeck` is seat 0's decklist for this battle — the run deck, which grows
- *  at each draft. The enemy replays the same starting deck every battle. */
+ *  at each draft. Seat 1 is the boss: no cards, just a life total. */
 export function initialState(yourDeck: CardId[] = STARTING_DECK): GameState {
   return {
     // Seat 0 moves first, so it takes its opening turn — and its first mana —
-    // right away. Everyone else waits for resolveTurn to bring their turn
-    // around.
+    // right away.
     players: [
       startTurn(deal(yourDeck, 0), 0),
-      deal(STARTING_DECK, yourDeck.length),
+      { deck: [], hand: [], mana: 0, maxMana: 0, hp: BOSS_HP },
     ],
     minions: [],
     activePlayerIndex: 0,
@@ -204,17 +214,21 @@ function advance(state: GameState, minion: Minion, cell: number): GameState {
   };
 }
 
-/** A minion at the enemy's face attacks their deck — milling cards equal to its
- *  attack — then leaves the board, its charge spent. */
+/** A minion at the enemy's face attacks their life total — hp for the boss,
+ *  milled cards for a deck player, either way its attack's worth — then leaves
+ *  the board, its charge spent. The blow that empties the boss's hp wins the
+ *  battle on the spot. */
 function raid(state: GameState, minion: Minion): GameState {
   const opponent = (minion.owner + 1) % state.players.length;
-  const players = state.players.map((p, i) =>
-    i === opponent ? { ...p, deck: p.deck.slice(CARDS[minion.card].atk) } : p,
-  );
+  const target = state.players[opponent];
+  const atk = CARDS[minion.card].atk;
+  const hit = isBoss(target)
+    ? { ...target, hp: target.hp - atk }
+    : { ...target, deck: target.deck.slice(atk) };
   return {
-    ...state,
-    players,
+    ...withPlayer(state, opponent, hit),
     minions: state.minions.filter((m) => m.uid !== minion.uid),
+    ...(isBoss(hit) && hit.hp <= 0 && { winner: minion.owner }),
   };
 }
 
@@ -300,16 +314,24 @@ export function resolveTurn(state: GameState): {
       mana: Math.min(p.mana, effectiveMaxMana(advanced, i)),
     })),
   };
+  // A winner decided mid-fold — a raid that felled the boss — ends the battle
+  // before the turn ever passes, so it outranks the deck-out check below.
+  if (advanced.winner !== undefined) return { state: advanced, fighters };
   const activePlayerIndex = (active + 1) % state.players.length;
   // Rule (b), deck-out on draw: the incoming player draws for the turn in
   // startTurn. An empty deck at that point is a failed forced draw — they
   // survived at zero but cannot draw, so they lose and the next seat wins.
-  if (advanced.players[activePlayerIndex].deck.length === 0) {
+  // The boss never draws, so it cannot deck out.
+  const incoming = advanced.players[activePlayerIndex];
+  if (!isBoss(incoming) && incoming.deck.length === 0) {
     const winner = (activePlayerIndex + 1) % state.players.length;
     return { state: { ...advanced, activePlayerIndex, winner }, fighters };
   }
+  // The boss has no mana or draw, so startTurn is not for it.
   const players = advanced.players.map((p, i) =>
-    i === activePlayerIndex ? startTurn(p, manaBonus(advanced, i)) : p,
+    i === activePlayerIndex && !isBoss(p)
+      ? startTurn(p, manaBonus(advanced, i))
+      : p,
   );
   return { state: { ...advanced, activePlayerIndex, players }, fighters };
 }
