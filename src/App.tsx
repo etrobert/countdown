@@ -11,7 +11,7 @@ import Remove from "./Remove.tsx";
 import { CARDS, HAND_SIZE, STARTING_DECK, type CardId } from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
-import { fadeOutMusic, setMusicPattern } from "./music.ts";
+import { fadeOutMusic, PATTERN_COUNT, setMusicPattern } from "./music.ts";
 import { playSummonSound } from "./sound.ts";
 import {
   chooseSummon,
@@ -165,8 +165,9 @@ export default function App() {
     if (phase !== "battle") return setMusicPattern(0);
     if (over) return fadeOutMusic();
     const baseline = Math.max(1, runDeck.length - HAND_SIZE - 1);
-    const stress = Math.round((11 * (baseline - deckLeft)) / baseline);
-    setMusicPattern(Math.min(11, Math.max(0, stress)));
+    const last = PATTERN_COUNT - 1;
+    const stress = Math.round((last * (baseline - deckLeft)) / baseline);
+    setMusicPattern(Math.min(last, Math.max(0, stress)));
   }, [phase, over, deckLeft, runDeck]);
 
   // Leave the between-battles steps and start the next battle with the given

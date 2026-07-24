@@ -5,7 +5,7 @@ import musicUrl from "./assets/music/countdown-2.mp3";
  *  tracks the game (see the music effect in App). Pattern bounds are derived
  *  from the decoded duration rather than hard-coded, so the mp3's encoder
  *  padding spreads across all twelve cuts instead of shifting them. */
-const PATTERN_COUNT = 12;
+export const PATTERN_COUNT = 12;
 
 /** Seconds. The short fade is a crossfade masking the click of a mid-wave
  *  pattern jump; the long one is the end-of-battle exit. */
