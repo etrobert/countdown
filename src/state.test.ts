@@ -20,7 +20,9 @@ import {
   FIREBALL_MILL,
   HAND_SIZE,
   LANE_CELLS,
+  MAX_MANA,
   STARTING_DECK,
+  STARTING_MANA,
   VOLLEY_MILL,
 } from "./balance.ts";
 
@@ -78,7 +80,7 @@ describe("initialState", () => {
     expect(state.players[0].deck).toHaveLength(
       STARTING_DECK.length - HAND_SIZE - 1,
     );
-    expect(state.players[0].mana).toBe(1);
+    expect(state.players[0].mana).toBe(STARTING_MANA);
     expect(state.activePlayerIndex).toBe(0);
     expect(state.winner).toBeUndefined();
   });
@@ -200,6 +202,16 @@ describe("resolveTurn", () => {
     const { state: after } = resolveTurn(state);
     expect(after.winner).toBeUndefined();
     expect(after.activePlayerIndex).toBe(1);
+  });
+
+  it("ramps the player's mana 3, 4, 5, then holds at the cap", () => {
+    let state = initialState();
+    expect(state.players[0].mana).toBe(STARTING_MANA);
+    for (const expected of [STARTING_MANA + 1, MAX_MANA, MAX_MANA]) {
+      // Two resolves bring the turn back around: player's ends, boss's ends.
+      state = resolveTurn(resolveTurn(state).state).state;
+      expect(state.players[0].mana).toBe(expected);
+    }
   });
 
   it("raids the enemy deck when a minion reaches their face", () => {

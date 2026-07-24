@@ -11,6 +11,7 @@ import {
   LANE_CELLS,
   MAX_MANA,
   STARTING_DECK,
+  STARTING_MANA,
   VOLLEY_DAMAGE,
   VOLLEY_MILL,
   type CardId,
@@ -39,7 +40,8 @@ export type Minion = CardInstance & {
  *  GameState, not here.
  *  `mana` is what is left to spend this turn; `maxMana` is the natural ceiling
  *  it refills to at the start of each of the player's turns, and grows by one
- *  every round — 1 on round 1, 2 on round 2, and so on — up to MAX_MANA.
+ *  every round — STARTING_MANA on round 1, one more each round after — up to
+ *  MAX_MANA.
  *  Wizards on the board raise the ceiling above `maxMana` — see
  *  `effectiveMaxMana`. */
 export type Player = {
@@ -97,9 +99,10 @@ function deal(deckList: CardId[], firstUid: number): Player {
   return {
     hand: cards.slice(0, HAND_SIZE),
     deck: cards.slice(HAND_SIZE),
-    // No mana yet: the first turn grants it, via startTurn.
+    // No mana yet: the first turn grants it, via startTurn — whose +1 lands
+    // the opening ceiling on STARTING_MANA.
     mana: 0,
-    maxMana: 0,
+    maxMana: STARTING_MANA - 1,
   };
 }
 
@@ -122,9 +125,9 @@ export function effectiveMaxMana(
   return state.players[playerIndex].maxMana + manaBonus(state, playerIndex);
 }
 
-/** Begins a player's turn: raises their natural mana ceiling by one — so it
- *  tracks the round number, up to MAX_MANA — refills mana to that ceiling plus
- *  the wizard bonus, and draws for the turn. A wizard summoned mid-turn shows
+/** Begins a player's turn: raises their natural mana ceiling by one — up to
+ *  MAX_MANA — refills mana to that ceiling plus the wizard bonus, and draws
+ *  for the turn. A wizard summoned mid-turn shows
  *  its crystal empty until this refill fills it. */
 function startTurn(player: Player, bonus: number): Player {
   const maxMana = Math.min(player.maxMana + 1, MAX_MANA);
