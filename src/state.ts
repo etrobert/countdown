@@ -30,16 +30,15 @@ export type Minion = CardInstance & {
 /** One player's private cards. The deck is their life total, the hand is what
  *  they can act on. Every player shares the board, so minions live on
  *  GameState, not here.
- *  `mana` is what is left to spend this turn; `maxMana` is the natural ceiling
- *  it refills to at the start of each of the player's turns, and grows by one
- *  every round — 1 on round 1, 2 on round 2, and so on — up to MAX_MANA.
- *  Wizards on the board raise the ceiling above `maxMana` — see
+ *  `mana` is what is left to spend this turn; `turns` counts the turns the
+ *  player has started. Their mana ceiling is derived from it — one crystal per
+ *  turn, up to MAX_MANA, plus any wizards on the board — see
  *  `effectiveMaxMana`. */
 export type Player = {
   deck: CardInstance[];
   hand: CardInstance[];
   mana: number;
-  maxMana: number;
+  turns: number;
 };
 
 export type GameState = {
@@ -69,7 +68,7 @@ function deal(deckList: CardId[], firstUid: number): Player {
     deck: cards.slice(HAND_SIZE),
     // No mana yet: the first turn grants it, via startTurn.
     mana: 0,
-    maxMana: 0,
+    turns: 0,
   };
 }
 
@@ -82,6 +81,11 @@ export function manaBonus(state: GameState, playerIndex: number): number {
   ).length;
 }
 
+/** The natural mana ceiling: one crystal per turn started, up to MAX_MANA. */
+function naturalMaxMana(player: Player): number {
+  return Math.min(player.turns, MAX_MANA);
+}
+
 /** The mana ceiling a player actually plays with: the natural ceiling plus the
  *  wizard bonus. The bonus sits on top of MAX_MANA — only natural growth is
  *  capped — so wizards still pay off late-game. */
@@ -89,16 +93,17 @@ export function effectiveMaxMana(
   state: GameState,
   playerIndex: number,
 ): number {
-  return state.players[playerIndex].maxMana + manaBonus(state, playerIndex);
+  const player = state.players[playerIndex];
+  return naturalMaxMana(player) + manaBonus(state, playerIndex);
 }
 
-/** Begins a player's turn: raises their natural mana ceiling by one — so it
- *  tracks the round number, up to MAX_MANA — refills mana to that ceiling plus
- *  the wizard bonus, and draws for the turn. A wizard summoned mid-turn shows
- *  its crystal empty until this refill fills it. */
+/** Begins a player's turn: counts the turn — which raises the natural ceiling,
+ *  until MAX_MANA — refills mana to that ceiling plus the wizard bonus, and
+ *  draws for the turn. A wizard summoned mid-turn shows its crystal empty until
+ *  this refill fills it. */
 function startTurn(player: Player, bonus: number): Player {
-  const maxMana = Math.min(player.maxMana + 1, MAX_MANA);
-  return drawCard({ ...player, maxMana, mana: maxMana + bonus });
+  const counted = { ...player, turns: player.turns + 1 };
+  return drawCard({ ...counted, mana: naturalMaxMana(counted) + bonus });
 }
 
 /** `yourDeck` is seat 0's decklist for this battle — the run deck, which grows
