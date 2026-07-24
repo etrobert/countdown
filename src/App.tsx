@@ -14,9 +14,7 @@ import { cn } from "./lib/utils.ts";
 import { playSummonSound } from "./sound.ts";
 import {
   chooseSummon,
-  effectiveMaxMana,
   initialState,
-  manaBonus,
   play,
   resolveTurn,
   step,
@@ -198,9 +196,8 @@ export default function App() {
             className="relative"
           />
           <Mana
-            mana={you.mana}
-            max={effectiveMaxMana(state, YOU)}
-            bonus={manaBonus(state, YOU)}
+            state={state}
+            playerIndex={YOU}
             flash={manaFlash}
             onFlashEnd={() => setManaFlash(false)}
           />
@@ -217,11 +214,7 @@ export default function App() {
             topUid={enemy.deck[0]?.uid}
             className="relative"
           />
-          <Mana
-            mana={enemy.mana}
-            max={effectiveMaxMana(state, ENEMY)}
-            bonus={manaBonus(state, ENEMY)}
-          />
+          <Mana state={state} playerIndex={ENEMY} />
         </div>
       </div>
       <Hand
