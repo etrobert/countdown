@@ -86,6 +86,29 @@ export type CardId = keyof typeof CARDS;
 
 export const CARD_IDS = Object.keys(CARDS) as CardId[];
 
+/** The boss's life total. Raids spend it instead of milling a deck. */
+export const BOSS_HP = 12;
+
+/** Odds of each telegraphed boss action once the safe runway ends. */
+export const BOSS_ACTION_WEIGHTS = {
+  summon: 0.5,
+  volley: 0.35,
+  fireball: 0.15,
+};
+
+/** Boss turns hard-forced to "summon" — a safe runway before volleys and
+ *  fireballs enter the roll, so the player can build a board first. */
+export const BOSS_SAFE_TURNS = 3;
+
+/** Damage a volley deals to the frontmost player minion in each lane. */
+export const VOLLEY_DAMAGE = 1;
+
+/** Cards a volley mills from the player's deck per empty lane. */
+export const VOLLEY_MILL = 1;
+
+/** Cards a fireball mills from the player's deck. */
+export const FIREBALL_MILL = 2;
+
 /** Cards offered at the between-battles draft; pick one or pass. */
 export const DRAFT_CHOICES = 3;
 
