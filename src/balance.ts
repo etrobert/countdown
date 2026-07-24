@@ -49,8 +49,11 @@ export const CARDS = {
     atk: 2,
     hp: 2,
     movement: 1,
+    text: "On death, puts its Arm in your deck",
     art: zombieArt,
   },
+  // Token left behind by a dying zombie; borrows the zombie's art for now.
+  arm: { name: "Arm", cost: 1, atk: 1, hp: 1, movement: 1, art: zombieArt },
   saper: { name: "Saper", cost: 3, atk: 3, hp: 2, movement: 3, art: saperArt },
   universman: {
     name: "Univers Man",
@@ -84,7 +87,13 @@ export const CARDS = {
 /** Identifies a kind of card, not a copy of one — see `CardInstance`. */
 export type CardId = keyof typeof CARDS;
 
-export const CARD_IDS = Object.keys(CARDS) as CardId[];
+/** Tokens enter play only through effects — never drafted, never in decklists. */
+const TOKEN_IDS: CardId[] = ["arm"];
+
+/** Every card a deck can be built from: the full pool minus the tokens. */
+export const CARD_IDS = (Object.keys(CARDS) as CardId[]).filter(
+  (id) => !TOKEN_IDS.includes(id),
+);
 
 /** Cards offered at the between-battles draft; pick one or pass. */
 export const DRAFT_CHOICES = 3;

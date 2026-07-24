@@ -49,6 +49,10 @@ export type GameState = {
   minions: Minion[];
   /** Seat index of the player whose turn it is. */
   activePlayerIndex: number;
+  /** First uid not yet given to any card copy. Effects that create cards
+   *  mid-battle (the zombie's arm) take it and bump it, keeping uids unique
+   *  across the whole battle. */
+  nextUid: number;
   /** Seat index of the player who has won, once the battle is over — absent
    *  while it is still live. A player loses the moment they are forced to draw
    *  from an empty deck at the start of their turn (see `resolveTurn`), which
@@ -114,6 +118,7 @@ export function initialState(yourDeck: CardId[] = STARTING_DECK): GameState {
     ],
     minions: [],
     activePlayerIndex: 0,
+    nextUid: yourDeck.length + STARTING_DECK.length,
   };
 }
 
@@ -218,15 +223,34 @@ function raid(state: GameState, minion: Minion): GameState {
   };
 }
 
+/** A dying zombie leaves its Arm behind: the token is shuffled into a random
+ *  spot in its owner's deck. The deck is the life total, so the arm also buys
+ *  back the card the zombie cost. */
+function spawnArm(state: GameState, playerIndex: number): GameState {
+  const player = state.players[playerIndex];
+  const at = Math.floor(Math.random() * (player.deck.length + 1));
+  const deck = player.deck.toSpliced(at, 0, {
+    uid: state.nextUid,
+    card: "arm",
+  });
+  return withPlayer({ ...state, nextUid: state.nextUid + 1 }, playerIndex, {
+    ...player,
+    deck,
+  });
+}
+
 /** Two enemy minions trade blows by their attack; either one dropped to 0 hp
- *  dies and leaves the board. */
+ *  dies and leaves the board — a zombie leaving its arm as it goes. */
 function clash(state: GameState, a: Minion, b: Minion): GameState {
   const damaged = state.minions.map((m) => {
     if (m.uid === a.uid) return { ...m, hp: m.hp - CARDS[b.card].atk };
     if (m.uid === b.uid) return { ...m, hp: m.hp - CARDS[a.card].atk };
     return m;
   });
-  return { ...state, minions: damaged.filter((m) => m.hp > 0) };
+  const next = { ...state, minions: damaged.filter((m) => m.hp > 0) };
+  return damaged
+    .filter((m) => m.hp <= 0 && m.card === "zombie")
+    .reduce((s, m) => spawnArm(s, m.owner), next);
 }
 
 /** The state after one minion's step, plus the minions that struck a blow

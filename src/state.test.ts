@@ -26,6 +26,7 @@ function emptyState(): GameState {
     players: [player(), player()],
     minions: [],
     activePlayerIndex: 0,
+    nextUid: 1000,
   };
 }
 
@@ -153,6 +154,26 @@ describe("resolveTurn", () => {
     expect(after.minions.find((m) => m.uid === 2)).toBeUndefined();
     expect(survivor?.hp).toBe(CARDS.lion.hp - CARDS.wizard.atk);
     expect(fighters.map((f) => f.uid).sort()).toEqual([1, 2]);
+  });
+
+  it("puts a dying zombie's arm into its owner's deck", () => {
+    const state: GameState = {
+      ...emptyState(),
+      minions: [
+        minion({ uid: 1, card: "zombie", owner: 0, lane: 0, cell: 2 }), // hp 2
+        minion({ uid: 2, card: "lion", owner: 1, lane: 0, cell: 3 }), // atk 5
+      ],
+    };
+    const before = state.players[0].deck.length;
+    const { state: after } = resolveTurn(state);
+    // The zombie walks into the lion and dies; its arm joins seat 0's deck.
+    expect(after.minions.find((m) => m.uid === 1)).toBeUndefined();
+    expect(after.players[0].deck).toHaveLength(before + 1);
+    const arm = after.players[0].deck.find((c) => c.card === "arm");
+    expect(arm).toMatchObject({ uid: state.nextUid });
+    expect(after.nextUid).toBe(state.nextUid + 1);
+    // The lion survived, so no arm for seat 1.
+    expect(after.players[1].deck.every((c) => c.card !== "arm")).toBe(true);
   });
 
   it("raids the enemy deck when a minion reaches their face", () => {
