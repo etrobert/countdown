@@ -3,6 +3,7 @@ import {
   BOSS_ACTION_WEIGHTS,
   BOSS_HP,
   BOSS_SAFE_TURNS,
+  BOSS_SCALE_EVERY,
   CARD_IDS,
   CARDS,
   FIREBALL_MILL,
@@ -506,12 +507,26 @@ export function bossSummon(state: GameState): {
   return { state: next, summoned };
 }
 
+/** How much the boss's actions have grown at a given power: +1 magnitude per
+ *  BOSS_SCALE_EVERY power, on top of the base VOLLEY/FIREBALL numbers. Takes
+ *  raw power so the UI can price the telegraphed action a turn ahead. */
+export function scaleBonus(power: number): number {
+  return Math.floor(power / BOSS_SCALE_EVERY);
+}
+
+/** The current scale bonus of the boss seat's actions. */
+function bossScaleBonus(state: GameState): number {
+  return scaleBonus(state.players.find(isBoss)?.power ?? 0);
+}
+
 /** The boss's volley action: in each lane, the frontmost player minion — the
- *  one furthest along its walk — takes VOLLEY_DAMAGE and dies at 0 hp; a lane
- *  with no player minion lets the shot through to mill VOLLEY_MILL from the
- *  player's deck instead. Boss minions are never hit. Any deck-out this brings
- *  on is caught by the usual check in `resolveTurn`. */
+ *  one furthest along its walk — takes VOLLEY_DAMAGE (plus the power scale
+ *  bonus) and dies at 0 hp; a lane with no player minion lets the shot through
+ *  to mill VOLLEY_MILL (plus the bonus) from the player's deck instead. Boss
+ *  minions are never hit. Any deck-out this brings on is caught by the usual
+ *  check in `resolveTurn`. */
 export function volley(state: GameState): GameState {
+  const bonus = bossScaleBonus(state);
   const fronts = Array.from({ length: LANES }, (_, lane) =>
     state.minions
       .filter((m) => m.owner === 0 && m.lane === lane)
@@ -521,25 +536,27 @@ export function volley(state: GameState): GameState {
   );
   const hit = new Set(fronts.filter((m) => m !== undefined).map((m) => m.uid));
   const minions = state.minions
-    .map((m) => (hit.has(m.uid) ? { ...m, hp: m.hp - VOLLEY_DAMAGE } : m))
+    .map((m) =>
+      hit.has(m.uid) ? { ...m, hp: m.hp - (VOLLEY_DAMAGE + bonus) } : m,
+    )
     .filter((m) => m.hp > 0);
   const misses = fronts.filter((m) => m === undefined).length;
   const player = state.players[0];
   return {
     ...withPlayer(state, 0, {
       ...player,
-      deck: player.deck.slice(misses * VOLLEY_MILL),
+      deck: player.deck.slice(misses * (VOLLEY_MILL + bonus)),
     }),
     minions,
   };
 }
 
-/** The boss's fireball action: mills FIREBALL_MILL straight off the player's
- *  deck, ignoring the board entirely. */
+/** The boss's fireball action: mills FIREBALL_MILL (plus the power scale
+ *  bonus) straight off the player's deck, ignoring the board entirely. */
 export function fireball(state: GameState): GameState {
   const player = state.players[0];
   return withPlayer(state, 0, {
     ...player,
-    deck: player.deck.slice(FIREBALL_MILL),
+    deck: player.deck.slice(FIREBALL_MILL + bossScaleBonus(state)),
   });
 }

@@ -8,7 +8,13 @@ import Hand from "./Hand.tsx";
 import { CLASH_MS, type MinionAttack } from "./Minion.tsx";
 import Mana from "./Mana.tsx";
 import Remove from "./Remove.tsx";
-import { CARDS, STARTING_DECK, type CardId } from "./balance.ts";
+import {
+  CARDS,
+  FIREBALL_MILL,
+  STARTING_DECK,
+  VOLLEY_DAMAGE,
+  type CardId,
+} from "./balance.ts";
 import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
 import { playSummonSound } from "./sound.ts";
@@ -19,6 +25,7 @@ import {
   fireball,
   initialState,
   resolveTurn,
+  scaleBonus,
   step,
   volley,
   type BossAction,
@@ -34,12 +41,21 @@ const YOU = 0;
 const ENEMY = 1;
 
 // The stored telegraph as flavor text — always the boss's announced NEXT
-// action, so the player can play around it.
-const TELEGRAPH_LINES: Record<BossAction, string> = {
-  summon: "The boss gathers reinforcements",
-  volley: "The boss readies a volley",
-  fireball: "The boss shapes a fireball",
-};
+// action, priced at the magnitude it will resolve with, so the player can
+// play around it. The boss's power grows by one as its turn starts, so an
+// announcement made on the player's turn resolves at power + 1; during the
+// boss's own turn the increment has already happened.
+function telegraphLine(state: GameState): string {
+  const boss = state.players[ENEMY];
+  const power = (boss.power ?? 0) + (state.activePlayerIndex === ENEMY ? 0 : 1);
+  const bonus = scaleBonus(power);
+  const lines: Record<BossAction, string> = {
+    summon: "The boss gathers reinforcements",
+    volley: `The boss readies a volley (${VOLLEY_DAMAGE + bonus})`,
+    fireball: `The boss shapes a fireball (${FIREBALL_MILL + bonus})`,
+  };
+  return lines[state.telegraph ?? "summon"];
+}
 
 /** Applies a state update inside a View Transition when the browser supports
  *  one. Every card and minion carries a stable `view-transition-name` keyed by
@@ -253,9 +269,7 @@ export default function App() {
       />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
         <p>{yourTurn ? "Your turn" : "Enemy turn"}</p>
-        {state.telegraph && (
-          <p className="text-sm">{TELEGRAPH_LINES[state.telegraph]}</p>
-        )}
+        {state.telegraph && <p className="text-sm">{telegraphLine(state)}</p>}
       </div>
       <button
         type="button"
