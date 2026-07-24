@@ -147,10 +147,12 @@ export default function App() {
       acted = next;
       await sleep(1000);
     }
-    const resolved = await playTurn(acted);
-    if (resolved.winner !== undefined) return;
-    // Announce the boss's next action. Just text — no transition needed.
-    setState({ ...resolved, telegraph: chooseBossAction(resolved) });
+    // Roll the next telegraph into the state the fold commits: playTurn's view
+    // transition applies its update a frame later, so a bare setState after it
+    // would be overwritten and the roll lost. The roll only reads the boss's
+    // power, which is already at this turn's value, so rolling before the fold
+    // resolves changes nothing else.
+    await playTurn({ ...acted, telegraph: chooseBossAction(acted) });
   }
 
   // Space and F1 end the turn, mirroring the End Turn button: they fire only
