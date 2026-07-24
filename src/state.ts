@@ -371,27 +371,6 @@ function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-/** The enemy's summon decision for one turn: the strongest affordable card from
- *  hand — the most atk+hp it can put on the board — dropped into a random open
- *  lane, or null when nothing in hand can be paid for or every entry cell is
- *  blocked. Kept apart from `play` so the caller learns which card was chosen —
- *  e.g. to sound its summon clip — since `play` only hands back the next state. */
-export function chooseSummon(state: GameState, playerIndex: number) {
-  const affordable = state.players[playerIndex].hand.filter((c) =>
-    canAfford(state, playerIndex, c.card),
-  );
-  const openLanes = Array.from({ length: LANES }, (_, lane) => lane).filter(
-    (lane) => canPlay(state, lane, playerIndex),
-  );
-  if (affordable.length === 0 || openLanes.length === 0) return null;
-
-  // Prefer the biggest body (atk+hp); ties broken randomly so play still varies.
-  const value = (c: CardInstance) => CARDS[c.card].atk + CARDS[c.card].hp;
-  const best = Math.max(...affordable.map(value));
-  const { uid, card } = pick(affordable.filter((c) => value(c) === best));
-  return { uid, card, lane: pick(openLanes) };
-}
-
 /** Plays a card from a player's hand into a lane, summoning it at their end of
  *  that lane and spending its mana cost. A no-op if the lane is blocked or the
  *  player cannot afford the card. */

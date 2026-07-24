@@ -13,11 +13,13 @@ import { useDrag } from "./drag.ts";
 import { cn } from "./lib/utils.ts";
 import { playSummonSound } from "./sound.ts";
 import {
-  chooseSummon,
+  bossSummon,
+  chooseBossAction,
+  fireball,
   initialState,
-  play,
   resolveTurn,
   step,
+  volley,
   type GameState,
   type Minion,
 } from "./state.ts";
@@ -103,36 +105,42 @@ export default function App() {
     return resolved;
   }
 
-  // End the human's turn, then drive the enemy's one beat at a time so the
-  // player can follow along: your minions act, then a second later the enemy
-  // summons, and a second after that its minions act back to you. Each beat is
-  // computed from the previous one with the pure state functions — the
-  // closure's `state` is only fresh at click time — which is also how the
-  // enemy's pick surfaces here to sound its clip. Off-turn plays can't land
-  // mid-sequence: `canPlay` rejects them once the first beat hands the turn
-  // to the enemy, and the hand stops dragging while it isn't your turn.
-  // A deck-out on the first beat ends the battle, so the enemy takes no turn.
+  // End the human's turn, then drive the boss's one beat at a time so the
+  // player can follow along: your minions act, then a second later the boss
+  // resolves the action it telegraphed last turn, and a second after that its
+  // minions act back to you. Each beat is computed from the previous one with
+  // the pure state functions — the closure's `state` is only fresh at click
+  // time. Off-turn plays can't land mid-sequence: `canPlay` rejects them once
+  // the first beat hands the turn to the boss, and the hand stops dragging
+  // while it isn't your turn. A deck-out on the first beat ends the battle, so
+  // the boss takes no turn.
   async function handleEndTurn() {
     const afterEnd = await playTurn(state);
     if (afterEnd.winner !== undefined) return;
     await sleep(1000);
-    // Summon until nothing more can be played: chooseSummon returns null once
-    // mana, hand, or open lanes run out, so the enemy spends its whole turn
-    // rather than a single card. Each summon is its own beat — animate, sound,
-    // pause — so the player can follow the board filling up.
-    let afterSummon = afterEnd;
-    for (
-      let choice = chooseSummon(afterSummon, ENEMY);
-      choice;
-      choice = chooseSummon(afterSummon, ENEMY)
-    ) {
-      afterSummon = play(afterSummon, ENEMY, choice.uid, choice.lane);
-      const summoned = afterSummon;
-      withViewTransition(() => setState(summoned));
-      playSummonSound(choice.card);
+    // Resolve the action telegraphed last turn — never the one rolled below,
+    // so the player always saw it coming. A summon that fizzles — no budget or
+    // no open lane — changes nothing, so nothing is shown.
+    let acted = afterEnd;
+    if (afterEnd.telegraph === "summon") {
+      const { state: next, summoned } = bossSummon(afterEnd);
+      if (summoned.length > 0) {
+        withViewTransition(() => setState(next));
+        playSummonSound(summoned[0]);
+        acted = next;
+        await sleep(1000);
+      }
+    } else if (afterEnd.telegraph !== undefined) {
+      const next =
+        afterEnd.telegraph === "volley" ? volley(afterEnd) : fireball(afterEnd);
+      withViewTransition(() => setState(next));
+      acted = next;
       await sleep(1000);
     }
-    await playTurn(afterSummon);
+    const resolved = await playTurn(acted);
+    if (resolved.winner !== undefined) return;
+    // Announce the boss's next action. Just text — no transition needed.
+    setState({ ...resolved, telegraph: chooseBossAction(resolved) });
   }
 
   // Space and F1 end the turn, mirroring the End Turn button: they fire only
