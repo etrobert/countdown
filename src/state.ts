@@ -11,6 +11,7 @@ import {
   LANE_CELLS,
   MAX_MANA,
   STARTING_DECK,
+  STARTING_MANA,
   VOLLEY_DAMAGE,
   VOLLEY_MILL,
   type CardId,
@@ -24,8 +25,10 @@ export type CardInstance = { uid: number; card: CardId };
 /** A card that has been played onto the board. Keeps its `uid` from the hand.
  *  `hp` is current health, the one stat that diverges from the printed card.
  *  `owner` is the seat that played it — it only advances on that player's turn.
- *  `summoned` marks a minion played this turn: it sits still on the turn it
- *  arrives and only starts walking on its owner's next turn. */
+ *  `summoned` marks a minion played this turn. A boss minion sits that turn
+ *  out entirely; a player's minion already acts — fighting included — but
+ *  walks at most one cell, so a stream of fast minions can't chain raids
+ *  faster than the boss can wall. */
 export type Minion = CardInstance & {
   owner: number;
   lane: number;
@@ -39,7 +42,8 @@ export type Minion = CardInstance & {
  *  GameState, not here.
  *  `mana` is what is left to spend this turn; `maxMana` is the natural ceiling
  *  it refills to at the start of each of the player's turns, and grows by one
- *  every round — 1 on round 1, 2 on round 2, and so on — up to MAX_MANA.
+ *  every round — STARTING_MANA on round 1, one more each round after — up to
+ *  MAX_MANA.
  *  Wizards on the board raise the ceiling above `maxMana` — see
  *  `effectiveMaxMana`. */
 export type Player = {
@@ -47,6 +51,9 @@ export type Player = {
   hand: CardInstance[];
   mana: number;
   maxMana: number;
+  /** Whether the once-per-turn voluntary draw has been used — see
+   *  `drawVoluntary`. Cleared when the turn comes back around. */
+  drewThisTurn?: boolean;
   /** The boss's life total — present only on the boss seat, which is what
    *  makes a seat the boss (see `isBoss`). The boss has no deck, hand, or
    *  mana; raids spend its hp instead of milling. */
@@ -97,9 +104,10 @@ function deal(deckList: CardId[], firstUid: number): Player {
   return {
     hand: cards.slice(0, HAND_SIZE),
     deck: cards.slice(HAND_SIZE),
-    // No mana yet: the first turn grants it, via startTurn.
+    // No mana yet: the first turn grants it, via startTurn — whose +1 lands
+    // the opening ceiling on STARTING_MANA.
     mana: 0,
-    maxMana: 0,
+    maxMana: STARTING_MANA - 1,
   };
 }
 
@@ -122,13 +130,18 @@ export function effectiveMaxMana(
   return state.players[playerIndex].maxMana + manaBonus(state, playerIndex);
 }
 
-/** Begins a player's turn: raises their natural mana ceiling by one — so it
- *  tracks the round number, up to MAX_MANA — refills mana to that ceiling plus
- *  the wizard bonus, and draws for the turn. A wizard summoned mid-turn shows
+/** Begins a player's turn: raises their natural mana ceiling by one — up to
+ *  MAX_MANA — refills mana to that ceiling plus the wizard bonus, and draws
+ *  for the turn. A wizard summoned mid-turn shows
  *  its crystal empty until this refill fills it. */
 function startTurn(player: Player, bonus: number): Player {
   const maxMana = Math.min(player.maxMana + 1, MAX_MANA);
-  return drawCard({ ...player, maxMana, mana: maxMana + bonus });
+  return drawCard({
+    ...player,
+    maxMana,
+    mana: maxMana + bonus,
+    drewThisTurn: false,
+  });
 }
 
 /** Begins the boss's turn — its side of `startTurn`: power grows by one and
@@ -176,6 +189,29 @@ function drawCard(player: Player): Player {
   const [top, ...rest] = player.deck;
   if (!top) return player;
   return { ...player, deck: rest, hand: [...player.hand, top] };
+}
+
+/** Draws one extra card of the player's own choosing — trading life for
+ *  options, since the deck is the life total and every draw spends one. Once
+ *  per turn, on top of the turn's draw; a no-op off-turn, once the battle is
+ *  over, or from an empty deck. Drawing the last card is allowed — the loss
+ *  then lands at the next turn's forced draw, per the usual deck-out rule. */
+export function drawVoluntary(
+  state: GameState,
+  playerIndex: number,
+): GameState {
+  const player = state.players[playerIndex];
+  if (
+    state.winner !== undefined ||
+    state.activePlayerIndex !== playerIndex ||
+    player.drewThisTurn ||
+    player.deck.length === 0
+  )
+    return state;
+  return withPlayer(state, playerIndex, {
+    ...drawCard(player),
+    drewThisTurn: true,
+  });
 }
 
 export function minionAt(state: GameState, lane: number, cell: number) {
@@ -284,29 +320,36 @@ type StepResult = { state: GameState; fighters?: Minion[] };
  *  board earlier this turn. The clash/raid cases also report the fighters,
  *  snapshotted as they stood so the resolved-away ones can still be animated. */
 function stepMinion(state: GameState, uid: number): StepResult {
-  const minion = state.minions.find((m) => m.uid === uid);
-  if (!minion) return { state };
-  if (minion.summoned) return { state: wake(state, minion) };
+  const found = state.minions.find((m) => m.uid === uid);
+  if (!found) return { state };
+  if (found.summoned && isBoss(state.players[found.owner]))
+    return { state: wake(state, found) };
+  // A player's fresh minion acts right away but its charge is short — movement
+  // capped at one this first turn — and it wakes as it goes.
+  const fresh = found.summoned;
+  const working = fresh ? wake(state, found) : state;
+  const minion = { ...found, summoned: false };
+  const movement = fresh ? 1 : CARDS[minion.card].movement;
   const ahead = minion.cell + step(minion.owner);
   if (ahead < 0 || ahead >= LANE_CELLS)
-    return { state: raid(state, minion), fighters: [minion] };
-  const other = minionAt(state, minion.lane, ahead);
+    return { state: raid(working, minion), fighters: [minion] };
+  const other = minionAt(working, minion.lane, ahead);
   if (!other) {
     // Walk forward one cell per movement point, stopping short of the first
     // occupied cell and at the lane's last cell — raiding and clashing only
     // happen on a turn where the obstacle stands directly ahead at the start.
     let cell = ahead;
-    for (let left = CARDS[minion.card].movement - 1; left > 0; left--) {
+    for (let left = movement - 1; left > 0; left--) {
       const next = cell + step(minion.owner);
       if (next < 0 || next >= LANE_CELLS) break;
-      if (minionAt(state, minion.lane, next)) break;
+      if (minionAt(working, minion.lane, next)) break;
       cell = next;
     }
-    return { state: advance(state, minion, cell) };
+    return { state: advance(working, minion, cell) };
   }
   if (other.owner !== minion.owner)
-    return { state: clash(state, minion, other), fighters: [minion, other] };
-  return { state };
+    return { state: clash(working, minion, other), fighters: [minion, other] };
+  return { state: working };
 }
 
 /** Ends the active player's turn: each of that player's minions takes its step
@@ -372,8 +415,9 @@ function pick<T>(items: T[]): T {
 }
 
 /** Plays a card from a player's hand into a lane, summoning it at their end of
- *  that lane and spending its mana cost. A no-op if the lane is blocked or the
- *  player cannot afford the card. */
+ *  that lane and spending its mana cost. The minion arrives marked `summoned`;
+ *  what that costs it depends on its owner — see `Minion`. A no-op if the lane
+ *  is blocked or the player cannot afford the card. */
 export function play(
   state: GameState,
   playerIndex: number,

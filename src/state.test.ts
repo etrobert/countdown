@@ -4,6 +4,7 @@ import {
   canAfford,
   canPlay,
   chooseBossAction,
+  drawVoluntary,
   entryCell,
   fireball,
   initialState,
@@ -20,7 +21,9 @@ import {
   FIREBALL_MILL,
   HAND_SIZE,
   LANE_CELLS,
+  MAX_MANA,
   STARTING_DECK,
+  STARTING_MANA,
   VOLLEY_MILL,
 } from "./balance.ts";
 
@@ -78,7 +81,7 @@ describe("initialState", () => {
     expect(state.players[0].deck).toHaveLength(
       STARTING_DECK.length - HAND_SIZE - 1,
     );
-    expect(state.players[0].mana).toBe(1);
+    expect(state.players[0].mana).toBe(STARTING_MANA);
     expect(state.activePlayerIndex).toBe(0);
     expect(state.winner).toBeUndefined();
   });
@@ -127,6 +130,33 @@ describe("play", () => {
     });
   });
 
+  it("steps a fresh player minion one cell, then at full speed", () => {
+    const base = emptyState();
+    base.players[0].hand = [{ uid: 7, card: "piou" }];
+    const played = play(base, 0, 7, 0);
+    // The turn it is played, its charge is short: one cell, not piou's 3.
+    const { state: after } = resolveTurn(played);
+    expect(after.minions[0].cell).toBe(1);
+    expect(after.minions[0].summoned).toBe(false);
+    // The next turn it walks its full movement.
+    const { state: next } = resolveTurn({ ...after, activePlayerIndex: 0 });
+    expect(next.minions[0].cell).toBe(1 + CARDS.piou.movement);
+  });
+
+  it("lets a fresh player minion fight the enemy directly ahead", () => {
+    const base = emptyState();
+    base.players[0].hand = [{ uid: 7, card: "zombie" }];
+    base.minions = [
+      // A 1-hp bush parked one cell from your entry: the fresh zombie (atk 2)
+      // strikes it the very turn it lands.
+      minion({ uid: 9, card: "bush", owner: 1, lane: 0, cell: 1 }),
+    ];
+    const played = play(base, 0, 7, 0);
+    const { state: after, fighters } = resolveTurn(played);
+    expect(after.minions.find((m) => m.uid === 9)).toBeUndefined();
+    expect(fighters.map((f) => f.uid).sort()).toEqual([7, 9]);
+  });
+
   it("is a no-op when the card is unaffordable", () => {
     const base = emptyState();
     base.players[0].hand = [{ uid: 7, card: "lion" }];
@@ -135,19 +165,49 @@ describe("play", () => {
   });
 });
 
+describe("drawVoluntary", () => {
+  it("moves the top card to hand, once per turn", () => {
+    const state = emptyState();
+    const top = state.players[0].deck[0];
+    const once = drawVoluntary(state, 0);
+    expect(once.players[0].hand).toEqual([top]);
+    expect(once.players[0].deck).toHaveLength(4);
+    // The turn's voluntary draw is spent: a second call changes nothing.
+    expect(drawVoluntary(once, 0)).toBe(once);
+  });
+
+  it("refuses a draw off-turn", () => {
+    const state = emptyState();
+    expect(drawVoluntary(state, 1)).toBe(state);
+  });
+
+  it("comes back when the turn does", () => {
+    const drawn = drawVoluntary(emptyState(), 0);
+    // Two resolves bring the turn back around; startTurn clears the flag.
+    const around = resolveTurn(resolveTurn(drawn).state).state;
+    // Hand holds the voluntary draw plus the turn's own; a fresh voluntary
+    // draw goes through again.
+    expect(around.players[0].hand).toHaveLength(2);
+    expect(drawVoluntary(around, 0).players[0].hand).toHaveLength(3);
+  });
+});
+
 describe("resolveTurn", () => {
-  it("holds a freshly summoned minion, then walks it next turn", () => {
+  it("holds a summoned boss minion, then walks it next turn", () => {
     const state: GameState = {
       ...emptyState(),
-      minions: [minion({ uid: 1, card: "bush", owner: 0, summoned: true })],
+      activePlayerIndex: 1,
+      minions: [minion({ uid: 1, card: "bush", owner: 1, summoned: true })],
     };
-    // Seat 0's turn resolves: the summoned minion wakes but does not move.
+    // Holding the arrival turn is the boss's rule alone (see Minion.summoned).
+    state.players[1] = { deck: [], hand: [], mana: 0, maxMana: 0, hp: 10 };
+    // Seat 1's turn resolves: the summoned minion wakes but does not move.
     const woken = resolveTurn(state).state;
-    expect(woken.minions[0].cell).toBe(0);
+    expect(woken.minions[0].cell).toBe(entryCell(1));
     expect(woken.minions[0].summoned).toBe(false);
-    // Back to seat 0: now it walks bush's movement (2) forward.
-    const walked = resolveTurn({ ...woken, activePlayerIndex: 0 }).state;
-    expect(walked.minions[0].cell).toBe(CARDS.bush.movement);
+    // Back to seat 1: now it walks bush's movement (2) forward.
+    const walked = resolveTurn({ ...woken, activePlayerIndex: 1 }).state;
+    expect(walked.minions[0].cell).toBe(entryCell(1) - CARDS.bush.movement);
   });
 
   it("clashes two facing minions, dealing attack as damage", () => {
@@ -200,6 +260,16 @@ describe("resolveTurn", () => {
     const { state: after } = resolveTurn(state);
     expect(after.winner).toBeUndefined();
     expect(after.activePlayerIndex).toBe(1);
+  });
+
+  it("ramps the player's mana 3, 4, 5, then holds at the cap", () => {
+    let state = initialState();
+    expect(state.players[0].mana).toBe(STARTING_MANA);
+    for (const expected of [STARTING_MANA + 1, MAX_MANA, MAX_MANA]) {
+      // Two resolves bring the turn back around: player's ends, boss's ends.
+      state = resolveTurn(resolveTurn(state).state).state;
+      expect(state.players[0].mana).toBe(expected);
+    }
   });
 
   it("raids the enemy deck when a minion reaches their face", () => {
@@ -282,6 +352,16 @@ describe("boss actions", () => {
       expect(m.uid).toBeGreaterThanOrEqual(910);
     }
     expect(after.nextUid).toBe(910 + summoned.length);
+  });
+
+  it("keeps summoning sickness on boss minions", () => {
+    // Power 1 buys exactly one cost-1 minion; resolving the boss's turn wakes
+    // it on its entry cell instead of stepping it.
+    const { state: summoned } = bossSummon(bossTurn(1));
+    expect(summoned.minions).toHaveLength(1);
+    const { state: after } = resolveTurn(summoned);
+    expect(after.minions[0].cell).toBe(entryCell(1));
+    expect(after.minions[0].summoned).toBe(false);
   });
 
   it("fizzles a summon with no budget", () => {
