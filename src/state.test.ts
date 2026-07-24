@@ -199,4 +199,28 @@ describe("resolveTurn", () => {
     );
     expect(after.minions).toHaveLength(0);
   });
+
+  it("mills 2 extra cards when a saper raids", () => {
+    const enemyDeck = STARTING_DECK.map((card, i) => ({ uid: 100 + i, card }));
+    const state: GameState = {
+      ...emptyState(),
+      minions: [
+        minion({
+          uid: 1,
+          card: "saper",
+          owner: 0,
+          lane: 0,
+          cell: LANE_CELLS - 1,
+        }),
+      ],
+    };
+    state.players[1].deck = enemyDeck;
+    const { state: after } = resolveTurn(state);
+    // Saper mills atk (3) + its charge (2), then the enemy draws 1 for their
+    // turn: the deck shrinks by 3 + 2 + 1.
+    expect(after.players[1].deck).toHaveLength(
+      enemyDeck.length - CARDS.saper.atk - 2 - 1,
+    );
+    expect(after.minions).toHaveLength(0);
+  });
 });

@@ -56,7 +56,15 @@ export const CARDS = {
   // Token left behind by a dying zombie; its art is the held-up arm cropped
   // out of the zombie's drawing.
   arm: { name: "Arm", cost: 1, atk: 0, hp: 1, movement: 1, art: armArt },
-  saper: { name: "Saper", cost: 3, atk: 3, hp: 2, movement: 3, art: saperArt },
+  saper: {
+    name: "Saper",
+    cost: 3,
+    atk: 3,
+    hp: 2,
+    movement: 3,
+    text: "Deals 2 more damage to the enemy's deck",
+    art: saperArt,
+  },
   universman: {
     name: "Univers Man",
     cost: 3,
