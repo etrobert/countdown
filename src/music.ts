@@ -5,6 +5,13 @@ import musicUrl from "./assets/music/countdown-2.mp3";
  *  tracks the game (see the music effect in App). */
 export const PATTERN_COUNT = 12;
 
+/** One pattern, in seconds. The source is 4200 mp3 frames of 1152 samples at
+ *  44.1kHz — exactly twelve patterns. Hard-coded rather than derived from the
+ *  decoded duration because decoders disagree on the buffer they produce
+ *  (WebKit trims the codec delay up front and pads the tail; others keep the
+ *  delay), so the decoded length is the one number not to trust. */
+const PATTERN_SECONDS = 4838400 / 44100 / PATTERN_COUNT;
+
 /** Seconds. The short fade is a crossfade masking the click of a mid-wave
  *  pattern jump; the long one is the end-of-battle exit. */
 const JUMP_FADE = 0.02;
@@ -65,15 +72,15 @@ function findLeadIn(audio: AudioBuffer): number {
   return 0;
 }
 
-/** The bounds of a pattern's loop within the buffer. The export is exactly
- *  twelve patterns long, so the pattern length is duration / 12 and the grid
- *  starts at the first audible sample; the last pattern's end is clamped to
- *  the buffer, short by the tail the encoder delay pushed off the edge. */
+/** The bounds of a pattern's loop within the buffer: the grid starts at the
+ *  first audible sample and advances one PATTERN_SECONDS per pattern. The last
+ *  pattern's end is clamped to the buffer, short by the tail the encoder delay
+ *  pushed off the edge. */
 function cuts(
   audio: AudioBuffer,
   index: number,
 ): { start: number; end: number; length: number } {
-  const length = audio.duration / PATTERN_COUNT;
+  const length = PATTERN_SECONDS;
   const start = leadIn + index * length;
   const end = Math.min(start + length, audio.duration);
   return { start, end, length };
