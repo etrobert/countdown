@@ -49,6 +49,9 @@ export type Player = {
   hand: CardInstance[];
   mana: number;
   maxMana: number;
+  /** Whether the once-per-turn voluntary draw has been used — see
+   *  `drawVoluntary`. Cleared when the turn comes back around. */
+  drewThisTurn?: boolean;
   /** The boss's life total — present only on the boss seat, which is what
    *  makes a seat the boss (see `isBoss`). The boss has no deck, hand, or
    *  mana; raids spend its hp instead of milling. */
@@ -131,7 +134,12 @@ export function effectiveMaxMana(
  *  its crystal empty until this refill fills it. */
 function startTurn(player: Player, bonus: number): Player {
   const maxMana = Math.min(player.maxMana + 1, MAX_MANA);
-  return drawCard({ ...player, maxMana, mana: maxMana + bonus });
+  return drawCard({
+    ...player,
+    maxMana,
+    mana: maxMana + bonus,
+    drewThisTurn: false,
+  });
 }
 
 /** Begins the boss's turn — its side of `startTurn`: power grows by one and
@@ -179,6 +187,29 @@ function drawCard(player: Player): Player {
   const [top, ...rest] = player.deck;
   if (!top) return player;
   return { ...player, deck: rest, hand: [...player.hand, top] };
+}
+
+/** Draws one extra card of the player's own choosing — trading life for
+ *  options, since the deck is the life total and every draw spends one. Once
+ *  per turn, on top of the turn's draw; a no-op off-turn, once the battle is
+ *  over, or from an empty deck. Drawing the last card is allowed — the loss
+ *  then lands at the next turn's forced draw, per the usual deck-out rule. */
+export function drawVoluntary(
+  state: GameState,
+  playerIndex: number,
+): GameState {
+  const player = state.players[playerIndex];
+  if (
+    state.winner !== undefined ||
+    state.activePlayerIndex !== playerIndex ||
+    player.drewThisTurn ||
+    player.deck.length === 0
+  )
+    return state;
+  return withPlayer(state, playerIndex, {
+    ...drawCard(player),
+    drewThisTurn: true,
+  });
 }
 
 export function minionAt(state: GameState, lane: number, cell: number) {

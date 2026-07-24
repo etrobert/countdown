@@ -14,7 +14,7 @@ export default function Deck({
   topUid,
 }: {
   count: number;
-  /** Omitted for the enemy deck, which is shown but not drawn from here. */
+  /** Omitted while drawing is not allowed; the deck renders non-interactive. */
   onDraw?: () => void;
   className?: string;
   /** uid of the card on top — the next to be drawn. The top back carries its
@@ -27,7 +27,7 @@ export default function Deck({
       type="button"
       onClick={onDraw}
       disabled={!interactive || count === 0}
-      aria-label={`${interactive ? "Draw a card" : "Enemy deck"} — ${count} left`}
+      aria-label={`${interactive ? "Draw a card" : "Your deck"} — ${count} left`}
       className={cn(
         "absolute h-[var(--card-h)] w-[var(--card-w)]",
         interactive
