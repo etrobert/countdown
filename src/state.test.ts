@@ -1,21 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
+  bossSummon,
   canAfford,
   canPlay,
+  chooseBossAction,
   entryCell,
+  fireball,
   initialState,
   play,
   resolveTurn,
   step,
+  volley,
   type GameState,
   type Minion,
 } from "./state.ts";
 import {
   BOSS_HP,
   CARDS,
+  FIREBALL_MILL,
   HAND_SIZE,
   LANE_CELLS,
   STARTING_DECK,
+  VOLLEY_MILL,
 } from "./balance.ts";
 
 /** A two-player state with stocked decks but no minions, for building combat
@@ -32,6 +38,7 @@ function emptyState(): GameState {
     players: [player(), player()],
     minions: [],
     activePlayerIndex: 0,
+    nextUid: 910,
   };
 }
 
@@ -217,5 +224,94 @@ describe("resolveTurn", () => {
       enemyDeck.length - CARDS.lion.atk - 1,
     );
     expect(after.minions).toHaveLength(0);
+  });
+});
+
+describe("boss actions", () => {
+  /** emptyState with seat 1 turned into the boss at the given power, on its
+   *  own turn — the posture every boss action resolves from. */
+  function bossTurn(power: number): GameState {
+    const state = emptyState();
+    state.players[1] = {
+      deck: [],
+      hand: [],
+      mana: 0,
+      maxMana: 0,
+      hp: 10,
+      power,
+    };
+    return { ...state, activePlayerIndex: 1 };
+  }
+
+  it("pre-rolls a summon telegraph for the boss's first turn", () => {
+    const state = initialState();
+    expect(state.telegraph).toBe("summon");
+    expect(state.players[1].power).toBe(0);
+  });
+
+  it("grows the boss's power when its turn comes around", () => {
+    const state = emptyState();
+    state.players[1] = {
+      deck: [],
+      hand: [],
+      mana: 0,
+      maxMana: 0,
+      hp: 10,
+      power: 0,
+    };
+    const { state: after } = resolveTurn(state);
+    expect(after.players[1].power).toBe(1);
+  });
+
+  it("hard-forces summon through the safe runway", () => {
+    // The roll while power is T decides turn T+1; turns 1-3 must all be
+    // summons no matter what the RNG says.
+    for (const power of [0, 1, 2])
+      expect(chooseBossAction(bossTurn(power))).toBe("summon");
+  });
+
+  it("spends the whole summon budget on boss-owned minions", () => {
+    const { state: after, summoned } = bossSummon(bossTurn(3));
+    const cost = summoned.reduce((sum, card) => sum + CARDS[card].cost, 0);
+    expect(cost).toBe(3);
+    expect(after.minions.length).toBe(summoned.length);
+    for (const m of after.minions) {
+      expect(m.owner).toBe(1);
+      expect(m.cell).toBe(entryCell(1));
+      expect(m.summoned).toBe(true);
+      expect(m.uid).toBeGreaterThanOrEqual(910);
+    }
+    expect(after.nextUid).toBe(910 + summoned.length);
+  });
+
+  it("fizzles a summon with no budget", () => {
+    const state = bossTurn(0);
+    const { state: after, summoned } = bossSummon(state);
+    expect(summoned).toHaveLength(0);
+    expect(after).toBe(state);
+  });
+
+  it("volleys the frontmost player minion per lane and mills empty lanes", () => {
+    const state = bossTurn(1);
+    state.minions = [
+      // Lane 0: bush (1 hp) in front at cell 3 dies to the volley's 1 damage;
+      // the zombie behind it is not the frontmost and is spared.
+      minion({ uid: 1, card: "bush", owner: 0, lane: 0, cell: 3 }),
+      minion({ uid: 2, card: "zombie", owner: 0, lane: 0, cell: 1 }),
+      // Lane 1 holds only a boss minion: no friendly fire, and the lane still
+      // counts as open for the mill.
+      minion({ uid: 3, card: "blob", owner: 1, lane: 1, cell: 5 }),
+    ];
+    const after = volley(state);
+    expect(after.minions.find((m) => m.uid === 1)).toBeUndefined();
+    expect(after.minions.find((m) => m.uid === 2)?.hp).toBe(CARDS.zombie.hp);
+    expect(after.minions.find((m) => m.uid === 3)?.hp).toBe(CARDS.blob.hp);
+    // Lanes 1-3 have no player minion: each mills VOLLEY_MILL (1) card.
+    expect(after.players[0].deck).toHaveLength(5 - 3 * VOLLEY_MILL);
+  });
+
+  it("fireballs straight into the player's deck", () => {
+    const after = fireball(bossTurn(1));
+    expect(after.players[0].deck).toHaveLength(5 - FIREBALL_MILL);
   });
 });
