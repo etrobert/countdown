@@ -196,8 +196,8 @@ export default function App() {
             className="relative"
           />
           <Mana
-            mana={you.mana}
-            max={you.maxMana}
+            state={state}
+            playerIndex={YOU}
             flash={manaFlash}
             onFlashEnd={() => setManaFlash(false)}
           />
@@ -214,7 +214,7 @@ export default function App() {
             topUid={enemy.deck[0]?.uid}
             className="relative"
           />
-          <Mana mana={enemy.mana} max={enemy.maxMana} />
+          <Mana state={state} playerIndex={ENEMY} />
         </div>
       </div>
       <Hand

@@ -30,9 +30,11 @@ export type Minion = CardInstance & {
 /** One player's private cards. The deck is their life total, the hand is what
  *  they can act on. Every player shares the board, so minions live on
  *  GameState, not here.
- *  `mana` is what is left to spend this turn; `maxMana` is the ceiling it
- *  refills to at the start of each of the player's turns, and grows by one every
- *  round — 1 on round 1, 2 on round 2, and so on — up to MAX_MANA. */
+ *  `mana` is what is left to spend this turn; `maxMana` is the natural ceiling
+ *  it refills to at the start of each of the player's turns, and grows by one
+ *  every round — 1 on round 1, 2 on round 2, and so on — up to MAX_MANA.
+ *  Wizards on the board raise the ceiling above `maxMana` — see
+ *  `effectiveMaxMana`. */
 export type Player = {
   deck: CardInstance[];
   hand: CardInstance[];
@@ -71,12 +73,32 @@ function deal(deckList: CardId[], firstUid: number): Player {
   };
 }
 
-/** Begins a player's turn: raises their mana ceiling by one — so it tracks the
- *  round number, up to MAX_MANA — refills mana to that ceiling, and draws for
- *  the turn. */
-function startTurn(player: Player): Player {
+/** The wizard's aura: one bonus mana crystal per wizard a player has on the
+ *  board. Derived from the board on every read, so a crystal appears the moment
+ *  a wizard is summoned and vanishes the moment it leaves. */
+export function manaBonus(state: GameState, playerIndex: number): number {
+  return state.minions.filter(
+    (m) => m.owner === playerIndex && m.card === "wizard",
+  ).length;
+}
+
+/** The mana ceiling a player actually plays with: the natural ceiling plus the
+ *  wizard bonus. The bonus sits on top of MAX_MANA — only natural growth is
+ *  capped — so wizards still pay off late-game. */
+export function effectiveMaxMana(
+  state: GameState,
+  playerIndex: number,
+): number {
+  return state.players[playerIndex].maxMana + manaBonus(state, playerIndex);
+}
+
+/** Begins a player's turn: raises their natural mana ceiling by one — so it
+ *  tracks the round number, up to MAX_MANA — refills mana to that ceiling plus
+ *  the wizard bonus, and draws for the turn. A wizard summoned mid-turn shows
+ *  its crystal empty until this refill fills it. */
+function startTurn(player: Player, bonus: number): Player {
   const maxMana = Math.min(player.maxMana + 1, MAX_MANA);
-  return drawCard({ ...player, maxMana, mana: maxMana });
+  return drawCard({ ...player, maxMana, mana: maxMana + bonus });
 }
 
 /** `yourDeck` is seat 0's decklist for this battle — the run deck, which grows
@@ -87,7 +109,7 @@ export function initialState(yourDeck: CardId[] = STARTING_DECK): GameState {
     // right away. Everyone else waits for resolveTurn to bring their turn
     // around.
     players: [
-      startTurn(deal(yourDeck, 0)),
+      startTurn(deal(yourDeck, 0), 0),
       deal(STARTING_DECK, yourDeck.length),
     ],
     minions: [],
@@ -269,6 +291,15 @@ export function resolveTurn(state: GameState): {
     advanced = result.state;
     if (result.fighters) fighters.push(...result.fighters);
   }
+  // A wizard that left the board this turn takes its crystal with it: clamp
+  // every player's leftover mana to the ceiling they still command.
+  advanced = {
+    ...advanced,
+    players: advanced.players.map((p, i) => ({
+      ...p,
+      mana: Math.min(p.mana, effectiveMaxMana(advanced, i)),
+    })),
+  };
   const activePlayerIndex = (active + 1) % state.players.length;
   // Rule (b), deck-out on draw: the incoming player draws for the turn in
   // startTurn. An empty deck at that point is a failed forced draw — they
@@ -278,7 +309,7 @@ export function resolveTurn(state: GameState): {
     return { state: { ...advanced, activePlayerIndex, winner }, fighters };
   }
   const players = advanced.players.map((p, i) =>
-    i === activePlayerIndex ? startTurn(p) : p,
+    i === activePlayerIndex ? startTurn(p, manaBonus(advanced, i)) : p,
   );
   return { state: { ...advanced, activePlayerIndex, players }, fighters };
 }
