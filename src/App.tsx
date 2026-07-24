@@ -20,15 +20,25 @@ import {
   resolveTurn,
   step,
   volley,
+  type BossAction,
   type GameState,
   type Minion,
 } from "./state.ts";
 
-// Seats. The local player's hand is face-up and draggable; the enemy's is a row
-// of card backs. Only two seats today — the board is two-sided — but GameState
-// holds a list, so adding more later is a layout problem, not a state one.
+// Seats. The local player's hand is face-up and draggable; the enemy seat is
+// the boss — no hand or deck, just hp. Only two seats today — the board is
+// two-sided — but GameState holds a list, so adding more later is a layout
+// problem, not a state one.
 const YOU = 0;
 const ENEMY = 1;
+
+// The stored telegraph as flavor text — always the boss's announced NEXT
+// action, so the player can play around it.
+const TELEGRAPH_LINES: Record<BossAction, string> = {
+  summon: "The boss gathers reinforcements",
+  volley: "The boss readies a volley",
+  fireball: "The boss shapes a fireball",
+};
 
 /** Applies a state update inside a View Transition when the browser supports
  *  one. Every card and minion carries a stable `view-transition-name` keyed by
@@ -188,14 +198,13 @@ export default function App() {
   return (
     <main
       className={cn(
-        "relative grid min-h-screen grid-rows-[auto_1fr_auto] justify-items-center bg-parchment text-ink",
+        "relative grid min-h-screen grid-rows-[1fr_auto] justify-items-center bg-parchment text-ink",
         drag && "cursor-grabbing select-none",
       )}
     >
-      <Hand cards={enemy.hand} faceDown />
-      {/* Decks flank the board at the ends they defend: yours on the left,
-          where your minions spawn and march right; the enemy's on the right.
-          Each deck's mana bar sits just below its stack. */}
+      {/* Each side's life total flanks the board at the end it defends: your
+          deck on the left, where your minions spawn and march right; the
+          boss's hp on the right. */}
       <div className="flex items-center gap-8">
         <div className="grid justify-items-center gap-3">
           <Deck
@@ -216,13 +225,9 @@ export default function App() {
           dragging={drag !== null}
           dragLane={drag?.lane ?? null}
         />
-        <div className="grid justify-items-center gap-3">
-          <Deck
-            count={enemy.deck.length}
-            topUid={enemy.deck[0]?.uid}
-            className="relative"
-          />
-          <Mana state={state} playerIndex={ENEMY} />
+        <div className="grid justify-items-center font-bold">
+          <span className="text-6xl">{enemy.hp}</span>
+          <span className="text-sm">BOSS HP</span>
         </div>
       </div>
       <Hand
@@ -231,7 +236,10 @@ export default function App() {
         onDragStart={busy || !yourTurn ? undefined : start}
       />
       <div className="absolute right-10 bottom-28 text-right font-bold text-ink">
-        {yourTurn ? "Your turn" : "Enemy turn"}
+        <p>{yourTurn ? "Your turn" : "Enemy turn"}</p>
+        {state.telegraph && (
+          <p className="text-sm">{TELEGRAPH_LINES[state.telegraph]}</p>
+        )}
       </div>
       <button
         type="button"
