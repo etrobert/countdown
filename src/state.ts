@@ -209,12 +209,18 @@ function advance(state: GameState, minion: Minion, cell: number): GameState {
   };
 }
 
-/** A minion at the enemy's face attacks their deck — milling cards equal to its
- *  attack — then leaves the board, its charge spent. */
+/** Cards a raiding minion mills off the enemy deck: its attack, plus the
+ *  saper's demolition charge of 2 — its whole reason to reach the far end. */
+function raidDamage(card: CardId): number {
+  return CARDS[card].atk + (card === "saper" ? 2 : 0);
+}
+
+/** A minion at the enemy's face attacks their deck — milling `raidDamage`
+ *  cards — then leaves the board, its charge spent. */
 function raid(state: GameState, minion: Minion): GameState {
   const opponent = (minion.owner + 1) % state.players.length;
   const players = state.players.map((p, i) =>
-    i === opponent ? { ...p, deck: p.deck.slice(CARDS[minion.card].atk) } : p,
+    i === opponent ? { ...p, deck: p.deck.slice(raidDamage(minion.card)) } : p,
   );
   return {
     ...state,
