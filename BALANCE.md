@@ -385,6 +385,25 @@ state change).
   between-battle flow, no carryover (Decision B stays gated).
 - **First numbers:** boss 1 HP = a low value set against ~turn-4 first-hit (start
   ~10-12, not 18); tune after game 1.
+
+### Boss scaling via a power budget (2026-07-24)
+
+New summon model: the boss has a `power` int — starts at 1, +1 each turn
+(mirrors the player mana ramp). A summon fields units whose mana costs **sum to
+the current `power`**, drawn from the shared card pool.
+
+- **One int = the whole difficulty curve.** Scales the boss with zero card-stat
+  changes and zero new cards/art — reuses `CARDS` costs and existing minion code.
+- **Free escalating pressure.** As power grows the boss fields more/bigger units,
+  contesting more lanes late (softens finding #2) while staying gentle during the
+  turns-1-3 safe runway. This is the anti-stall lethality clock we wanted →
+  **likely subsumes the Phase 3 buff.**
+- **Specify — the unit mix.** For a budget, many small units (spread across lanes,
+  harder for the player) vs one big unit (single strong threat) play very
+  differently. MVP default: greedily/randomly fill open lanes with affordable
+  cards until the budget is spent.
+- **Tune — ramp rate.** +1/turn reaches ~10 by turn 10; on a 16-cell board that's
+  a heavy late board. Slow the ramp if the boss snowballs — a playtest number.
 - Use a **separate `hp` field**, not `deck.length`, or the boss sabotages itself
   ~1/turn by drawing.
 

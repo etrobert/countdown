@@ -19,8 +19,9 @@ telegraphed actions instead of a mirror deck.
 ## 1. Locked decisions (validated 2026-07-24)
 
 1. **Boss resource model:** the boss has **`hp` only** — no deck, no hand, no
-   draw, no mana. Its actions are **free**. Summon pulls from a **hard-coded card
-   list**, not a hand. `startTurn` is never called on the boss.
+   draw, no mana. Its actions are **free**. Summon spends a growing **`power`
+   budget** (§3), drawing from the shared card pool — not a hand. `startTurn` is
+   never called on the boss.
 2. **Win/lose:** player wins when boss `hp <= 0` (checked inside `raid`). The
    existing deck-out loss (`resolveTurn:255`) applies to the **player only** — it
    must be suppressed for the boss seat (a boss with no deck must not "deck out").
@@ -69,8 +70,13 @@ minion-stat buffs.
   **no player unit** mills the player 2. No friendly fire on boss summons.
 - **Fireball:** mills the player 2. **Rare**, and excluded from the safe runway (a
   deck hit has no board counterplay, so keep it a gut-punch, not a staple).
-- **Summon:** create a boss-owned minion from a hard-coded `CardId` (reuse the
-  minion-creation half of `play()`, skip hand/mana). Boss minions **keep**
+- **Summon (power budget):** the boss has a `power` int — **starts at 1, +1 each
+  boss turn** (mirrors the player mana ramp). A summon fields units whose mana
+  costs **sum to the current `power`**, drawn from the shared card pool (reuse the
+  minion-creation half of `play()`, skip hand/mana). This is the entire difficulty
+  curve in one int — no card-stat changes, no new cards/art. **Default mix:**
+  greedily/randomly fill open lanes with affordable cards (cost ≤ remaining
+  budget) until the budget is spent or nothing fits. Boss minions **keep**
   summoning sickness and still march + `raid` the player's deck as today.
 - **Tie** (boss hits 0 the same turn the player would deck out): **player wins**
   (lethal is an active play; it beats the passive start-of-turn deck-out check).
@@ -88,7 +94,8 @@ minion-stat buffs.
     `winner` if `hp <= 0`**; player target → existing `deck.slice`.
   - `resolveTurn()` (`state.ts:255`): **skip the deck-out loss for the boss
     seat**; do not `startTurn` the boss.
-  - New: `chooseBossAction()` (rotation + safe runway), `bossSummon()`,
+  - New: `power` int on the boss (starts 1, +1/boss turn); `chooseBossAction()`
+    (rotation + safe runway), `bossSummon()` (spends `power` — sum of card costs),
     `volley()`, `fireball()`; `telegraph` field on `GameState`.
   - Phase 2: export `drawVoluntary()` (reuses `drawCard`, guards `drewThisTurn`,
     reset in `startTurn`); asymmetric `summoned` = (owner is boss) in `play()`
@@ -125,7 +132,9 @@ mostly disjoint areas → **parallelisable across agents** (merge order as liste
 7. `feat: asymmetric summoning sickness` — player units instant, boss keeps it.
 
 **Phase 3 — optional:**
-8. `feat: boss escalation` — `bossPower` + buff action scaling volley/fireball.
+8. `feat: power scales actions` — extend the Phase-1 `power` int to also scale
+   volley/fireball magnitude. Summon scaling already lands in Phase 1, so `power`
+   already provides the escalating pressure — this tier is now largely optional.
 
 ## 6. The two hard spots (where the time goes)
 
