@@ -33,7 +33,7 @@
             pnpmDeps = pkgs.fetchPnpmDeps {
               inherit (finalAttrs) pname version src;
               fetcherVersion = 4;
-              hash = "sha256-pQG/7ERxCgn6+7hl2TMbXMXzHumSf+VNoNN16oWjuEY=";
+              hash = "sha256-v3efEJEZmzHj9tgR3EdWskqcfCMcka31InPX1F1xNHs=";
             };
 
             # Run the unit tests before building, so `nix build` (and CI) fails
