@@ -33,6 +33,8 @@
             pnpmDeps = pkgs.fetchPnpmDeps {
               inherit (finalAttrs) pname version src;
               fetcherVersion = 4;
+              # pnpm 12.7+ skips foreign optional deps until NixOS/nixpkgs#572207 reaches nixos-unstable
+              prePnpmInstall = "export pnpm_config_force_ignores_platform=true";
               hash = "sha256-v3efEJEZmzHj9tgR3EdWskqcfCMcka31InPX1F1xNHs=";
             };
 
